@@ -1,0 +1,197 @@
+/* Responsponsive layout สำหรับ BJT DC Bias Calculator */
+
+/* --- Reset & Base --- */
+:root {
+    --navy: #103658;
+    --blue: #1d638b;
+    --teal: #0c8078;
+    --paper: #f5f8fc;
+    --ink: #17344b;
+    --muted: #546d83;
+    --line: #d3e0ec;
+    --orange: #b85c2c;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    background: var(--paper);
+    color: var(--ink);
+    margin: 0;
+    font: 16px/1.76 Tahoma, "Noto Sans Thai", Leelawadee UI, Arial, sans-serif;
+}
+
+p {
+    margin: 8px 0 13px;
+}
+
+a {
+    color: #1264a0;
+}
+
+/* --- Hero Section --- */
+.hero {
+    background: linear-gradient(115deg, #0c304f, #20577d 70%, #0c6e79);
+    color: white;
+    padding: 48px 24px;
+}
+
+.wrap,
+main {
+    max-width: 1140px;
+    margin: auto;
+}
+
+.hero h1 {
+    font-size: clamp(1.7rem, 4vw, 2.5rem);
+    line-height: 1.31;
+    margin: 12px 0 15px;
+}
+
+.hero p {
+    max-width: 940px;
+    color: #ddf0fd;
+}
+
+/* --- Form Layout --- */
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.row > div {
+    flex: 1;
+    min-width: 200px;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: var(--ink);
+}
+
+input[type="number"] {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    font-size: 14px;
+    background: white;
+    transition: border-color 0.3s;
+}
+
+input[type="number"]:focus {
+    outline: none;
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(29, 99, 139, 0.1);
+}
+
+/* --- Buttons --- */
+.btn {
+    display: inline-block;
+    padding: 10px 24px;
+    background: var(--blue);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s;
+    margin-top: 15px;
+}
+
+.btn:hover {
+    background: var(--teal);
+}
+
+/* --- Card --- */
+.card {
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    margin: 18px 0;
+    padding: 24px 28px;
+}
+
+.card h2 {
+    font-size: 1.5rem;
+    line-height: 1.35;
+    color: #113c60;
+    margin: 5px 0 12px;
+}
+
+.kicker {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    color: var(--blue);
+}
+
+/* --- Table --- */
+table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 660px;
+    font-size: 14px;
+}
+
+td,
+th {
+    border: 1px solid var(--line);
+    padding: 10px 12px;
+    vertical-align: top;
+    text-align: left;
+}
+
+th {
+    background: #e6f1fa;
+    color: #123e5c;
+}
+
+tbody tr:nth-child(even) {
+    background: #f7fbfe;
+}
+
+/* --- Notes --- */
+.note {
+    background: #fff4e9;
+    border-left: 4px solid var(--orange);
+    padding: 12px 15px;
+    margin: 12px 0;
+    border-radius: 0 6px 6px 0;
+}
+
+.good {
+    background: #e9f6f2;
+    border-left: 4px solid #178875;
+    padding: 12px 15px;
+    margin: 12px 0;
+    border-radius: 0 6px 6px 0;
+}
+
+/* --- Footer --- */
+footer {
+    text-align: center;
+    padding: 24px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+/* --- Responsive --- */
+@media (max-width: 640px) {
+    main {
+        padding: 10px;
+    }
+    .card {
+        padding: 17px 15px;
+    }
+    .hero {
+        padding: 33px 17px;
+    }
+}

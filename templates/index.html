@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="th">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BJT DC Bias Calculator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="hero">
+        <div class="wrap">
+            <div class="eyebrow">ENG29 2121 · COMPUTER PROGRAMMING FOR ELECTRICAL ENGINEERS · 2/2569</div>
+            <h1>LAB 02 · BJT DC Bias Calculator</h1>
+            <p>วงจร BJT Common-Emitter แบบ Voltage-Divider Bias</p>
+        </div>
+    </header>
+
+    <main>
+        <section class="card">
+            <h2>กรอกค่าพารามิเตอร์</h2>
+
+            <form method="POST" action="{{ url_for('calculate') }}">
+                <div class="row">
+                    <div class="col-6">
+                        <label for="vcc">VCC (V)</label>
+                        <input type="number" step="0.1" min="0" id="vcc" name="vcc"
+                               value="{{ form.get('vcc', '') }}" required>
+                    </div>
+                    <div class="col-6">
+                        <label for="vbe">VBE (V)</label>
+                        <input type="number" step="0.01" min="0" id="vbe" name="vbe"
+                               value="{{ form.get('vbe', '0.70') }}">
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-6">
+                        <label for="r1">R1 (kΩ)</label>
+                        <input type="number" step="0.1" min="0" id="r1" name="r1"
+                               value="{{ form.get('r1', '') }}" required>
+                    </div>
+                    <div class="col-6">
+                        <label for="r2">R2 (kΩ)</label>
+                        <input type="number" step="0.1" min="0" id="r2" name="r2"
+                               value="{{ form.get('r2', '') }}" required>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-6">
+                        <label for="rc">RC (kΩ)</label>
+                        <input type="number" step="0.1" min="0" id="rc" name="rc"
+                               value="{{ form.get('rc', '') }}" required>
+                    </div>
+                    <div class="col-6">
+                        <label for="re">RE (kΩ)</label>
+                        <input type="number" step="0.1" min="0" id="re" name="re"
+                               value="{{ form.get('re', '') }}" required>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-6">
+                        <label for="beta">β (Beta)</label>
+                        <input type="number" step="1" min="0" id="beta" name="beta"
+                               value="{{ form.get('beta', '') }}" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn">Calculate DC Bias</button>
+            </form>
+        </section>
+
+        {% if result %}
+        <section class="card">
+            {% if result.error %}
+            <div class="note">
+                <strong>❌ Error:</strong> {{ result.error }}
+            </div>
+            {% else %}
+            <h3>ผลลัพธ์ DC Bias</h3>
+
+            <div class="good">
+                <table>
+                    <tbody>
+                        <tr><th>VB</th><td>{{ "%.3f"|format(result.vb) }} V</td></tr>
+                        <tr><th>VE</th><td>{{ "%.3f"|format(result.ve) }} V</td></tr>
+                        <tr><th>VC</th><td>{{ "%.3f"|format(result.vc) }} V</td></tr>
+                        <tr><th>VCE</th><td>{{ "%.3f"|format(result.vce) }} V</td></tr>
+                        <tr><th>IB</th><td>{{ "%.2f"|format(result.ib * 1e6) }} μA</td></tr>
+                        <tr><th>IC</th><td>{{ "%.2f"|format(result.ic * 1e3) }} mA</td></tr>
+                        <tr><th>IE</th><td>{{ "%.2f"|format(result.ie * 1e3) }} mA</td></tr>
+                        <tr><th>VTH</th><td>{{ "%.3f"|format(result.vth) }} V</td></tr>
+                        <tr><th>RTH</th><td>{{ "%.2f"|format(result.rth / 1000) }} kΩ</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p><strong>โซนการทำงาน:</strong> {{ result.region }}</p>
+
+            {% if result.warning %}
+            <div class="note">
+                <strong>⚠️ Warning:</strong> {{ result.warning }}
+            </div>
+            {% endif %}
+            {% endif %}
+        </section>
+        {% endif %}
+    </main>
+
+    <footer>
+        <p>สร้างด้วย Flask + Python · ENG29 2121 · Lab 02</p>
+    </footer>
+</body>
+</html>
