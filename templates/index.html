@@ -26,45 +26,87 @@
             <form method="POST" action="{{ url_for('calculate') }}" id="bias-form" novalidate>
                 <div class="row">
                     <div class="col-6">
-                        <label for="vcc">VCC (V)</label>
-                        <input type="number" step="0.1" min="0" id="vcc" name="vcc"
-                               value="{{ form.get('vcc', '') }}" placeholder="เช่น 12" required>
+                        <label for="vcc">VCC</label>
+                        <div class="field-group">
+                            <input type="number" step="any" min="0" id="vcc" name="vcc"
+                                   value="{{ form.get('vcc', '') }}" placeholder="เช่น 12" required>
+                            <select name="vcc_unit" aria-label="หน่วย VCC">
+                                {% for unit in voltage_choices %}
+                                <option value="{{ unit }}" {{ 'selected' if selections.get('vcc_unit', 'V') == unit else '' }}>{{ unit }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                         <span class="hint">แรงดันจ่ายแหล่งอากาศ</span>
                     </div>
                     <div class="col-6">
-                        <label for="vbe">VBE (V)</label>
-                        <input type="number" step="0.01" min="0" id="vbe" name="vbe"
-                               value="{{ form.get('vbe', '0.70') }}" placeholder="0.70">
+                        <label for="vbe">VBE</label>
+                        <div class="field-group">
+                            <input type="number" step="any" min="0" id="vbe" name="vbe"
+                                   value="{{ form.get('vbe', '0.70') }}" placeholder="0.70">
+                            <select name="vbe_unit" aria-label="หน่วย VBE">
+                                {% for unit in voltage_choices %}
+                                <option value="{{ unit }}" {{ 'selected' if selections.get('vbe_unit', 'V') == unit else '' }}>{{ unit }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                         <span class="hint">แรงดัน Base–Emitter (โดยทั่วไป 0.70)</span>
                     </div>
                 </div>
 
                 <div class="row">
                     <div class="col-6">
-                        <label for="r1">R1 (kΩ)</label>
-                        <input type="number" step="0.1" min="0" id="r1" name="r1"
-                               value="{{ form.get('r1', '') }}" placeholder="เช่น 100" required>
+                        <label for="r1">R1</label>
+                        <div class="field-group">
+                            <input type="number" step="any" min="0" id="r1" name="r1"
+                                   value="{{ form.get('r1', '') }}" placeholder="เช่น 100" required>
+                            <select name="r1_unit" aria-label="หน่วย R1">
+                                {% for unit in resistance_choices %}
+                                <option value="{{ unit }}" {{ 'selected' if selections.get('r1_unit', 'kΩ') == unit else '' }}>{{ unit }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                         <span class="hint">ตัวต้านทานระหว่าง VCC กับ Base</span>
                     </div>
                     <div class="col-6">
-                        <label for="r2">R2 (kΩ)</label>
-                        <input type="number" step="0.1" min="0" id="r2" name="r2"
-                               value="{{ form.get('r2', '') }}" placeholder="เช่น 22" required>
+                        <label for="r2">R2</label>
+                        <div class="field-group">
+                            <input type="number" step="any" min="0" id="r2" name="r2"
+                                   value="{{ form.get('r2', '') }}" placeholder="เช่น 22" required>
+                            <select name="r2_unit" aria-label="หน่วย R2">
+                                {% for unit in resistance_choices %}
+                                <option value="{{ unit }}" {{ 'selected' if selections.get('r2_unit', 'kΩ') == unit else '' }}>{{ unit }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                         <span class="hint">ตัวต้านทานระหว่าง Base กับ Ground</span>
                     </div>
                 </div>
 
                 <div class="row">
                     <div class="col-6">
-                        <label for="rc">RC (kΩ)</label>
-                        <input type="number" step="0.1" min="0" id="rc" name="rc"
-                               value="{{ form.get('rc', '') }}" placeholder="เช่น 2.2" required>
+                        <label for="rc">RC</label>
+                        <div class="field-group">
+                            <input type="number" step="any" min="0" id="rc" name="rc"
+                                   value="{{ form.get('rc', '') }}" placeholder="เช่น 2.2" required>
+                            <select name="rc_unit" aria-label="หน่วย RC">
+                                {% for unit in resistance_choices %}
+                                <option value="{{ unit }}" {{ 'selected' if selections.get('rc_unit', 'kΩ') == unit else '' }}>{{ unit }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                         <span class="hint">ตัวต้านทานระหว่าง VCC กับ Collector</span>
                     </div>
                     <div class="col-6">
-                        <label for="re">RE (kΩ)</label>
-                        <input type="number" step="0.1" min="0" id="re" name="re"
-                               value="{{ form.get('re', '') }}" placeholder="เช่น 1" required>
+                        <label for="re">RE</label>
+                        <div class="field-group">
+                            <input type="number" step="any" min="0" id="re" name="re"
+                                   value="{{ form.get('re', '') }}" placeholder="เช่น 1" required>
+                            <select name="re_unit" aria-label="หน่วย RE">
+                                {% for unit in resistance_choices %}
+                                <option value="{{ unit }}" {{ 'selected' if selections.get('re_unit', 'kΩ') == unit else '' }}>{{ unit }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                         <span class="hint">ตัวต้านทานระหว่าง Emitter กับ Ground</span>
                     </div>
                 </div>
@@ -72,9 +114,32 @@
                 <div class="row">
                     <div class="col-6">
                         <label for="beta">β (Beta / HFE)</label>
-                        <input type="number" step="1" min="0" id="beta" name="beta"
-                               value="{{ form.get('beta', '') }}" placeholder="เช่น 100" required>
+                        <div class="field-group">
+                            <input type="number" step="1" min="0" id="beta" name="beta"
+                                   value="{{ form.get('beta', '') }}" placeholder="เช่น 100" required>
+                            <span class="unit-tag">ไม่มีหน่วย</span>
+                        </div>
                         <span class="hint">อัตราขยายกระแสของทรานซิสเตอร์</span>
+                    </div>
+                </div>
+
+                <h3>หน่วยที่ใช้แสดงผล</h3>
+                <div class="row">
+                    <div class="col-6">
+                        <label for="voltage_display">หน่วยแรงดัน</label>
+                        <select id="voltage_display" name="voltage_display">
+                            {% for unit in voltage_display_choices %}
+                            <option value="{{ unit }}" {{ 'selected' if selections.get('voltage_display', 'auto') == unit else '' }}>{{ 'อัตโนมัติ' if unit == 'auto' else unit }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label for="current_display">หน่วยกระแส</label>
+                        <select id="current_display" name="current_display">
+                            {% for unit in current_display_choices %}
+                            <option value="{{ unit }}" {{ 'selected' if selections.get('current_display', 'auto') == unit else '' }}>{{ 'อัตโนมัติ' if unit == 'auto' else unit }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
                 </div>
 
@@ -111,39 +176,39 @@
             <div class="result-grid">
                 <div class="result-item">
                     <span class="label">VB</span>
-                    <span class="value">{{ "%.3f"|format(result.vb) }} <span class="unit">V</span></span>
+                    <span class="value">{{ display.vb.value }} <span class="unit">{{ display.vb.unit }}</span></span>
                 </div>
                 <div class="result-item">
                     <span class="label">VE</span>
-                    <span class="value">{{ "%.3f"|format(result.ve) }} <span class="unit">V</span></span>
+                    <span class="value">{{ display.ve.value }} <span class="unit">{{ display.ve.unit }}</span></span>
                 </div>
                 <div class="result-item">
                     <span class="label">VC</span>
-                    <span class="value">{{ "%.3f"|format(result.vc) }} <span class="unit">V</span></span>
+                    <span class="value">{{ display.vc.value }} <span class="unit">{{ display.vc.unit }}</span></span>
                 </div>
                 <div class="result-item">
                     <span class="label">VCE</span>
-                    <span class="value">{{ "%.3f"|format(result.vce) }} <span class="unit">V</span></span>
+                    <span class="value">{{ display.vce.value }} <span class="unit">{{ display.vce.unit }}</span></span>
                 </div>
                 <div class="result-item">
                     <span class="label">IB</span>
-                    <span class="value">{{ "%.2f"|format(result.ib * 1e6) }} <span class="unit">µA</span></span>
+                    <span class="value">{{ display.ib.value }} <span class="unit">{{ display.ib.unit }}</span></span>
                 </div>
                 <div class="result-item">
                     <span class="label">IC</span>
-                    <span class="value">{{ "%.2f"|format(result.ic * 1e3) }} <span class="unit">mA</span></span>
+                    <span class="value">{{ display.ic.value }} <span class="unit">{{ display.ic.unit }}</span></span>
                 </div>
                 <div class="result-item">
                     <span class="label">IE</span>
-                    <span class="value">{{ "%.2f"|format(result.ie * 1e3) }} <span class="unit">mA</span></span>
+                    <span class="value">{{ display.ie.value }} <span class="unit">{{ display.ie.unit }}</span></span>
                 </div>
                 <div class="result-item">
                     <span class="label">VTH</span>
-                    <span class="value">{{ "%.3f"|format(result.vth) }} <span class="unit">V</span></span>
+                    <span class="value">{{ display.vth.value }} <span class="unit">{{ display.vth.unit }}</span></span>
                 </div>
                 <div class="result-item">
                     <span class="label">RTH</span>
-                    <span class="value">{{ "%.2f"|format(result.rth / 1000) }} <span class="unit">kΩ</span></span>
+                    <span class="value">{{ display.rth.value }} <span class="unit">{{ display.rth.unit }}</span></span>
                 </div>
             </div>
 
@@ -162,16 +227,19 @@
                 <summary>ดูรายละเอียดผลการคำนวณ</summary>
                 <div class="table-wrap">
                     <table>
+                        <thead>
+                            <tr><th>ขั้นตอน</th><th>ผลลัพธ์</th><th>ค่า SI</th></tr>
+                        </thead>
                         <tbody>
-                            <tr><th>VTH = VCC·R2/(R1+R2)</th><td>{{ "%.6f"|format(result.vth) }} V</td></tr>
-                            <tr><th>RTH = R1·R2/(R1+R2)</th><td>{{ "%.3f"|format(result.rth) }} Ω</td></tr>
-                            <tr><th>IB = (VTH−VBE)/(RTH+(β+1)RE)</th><td>{{ "%.6f"|format(result.ib) }} A</td></tr>
-                            <tr><th>IC = β·IB</th><td>{{ "%.6f"|format(result.ic) }} A</td></tr>
-                            <tr><th>IE = (β+1)·IB</th><td>{{ "%.6f"|format(result.ie) }} A</td></tr>
-                            <tr><th>VE = IE·RE</th><td>{{ "%.6f"|format(result.ve) }} V</td></tr>
-                            <tr><th>VB = VE + VBE</th><td>{{ "%.6f"|format(result.vb) }} V</td></tr>
-                            <tr><th>VC = VCC − IC·RC</th><td>{{ "%.6f"|format(result.vc) }} V</td></tr>
-                            <tr><th>VCE = VC − VE</th><td>{{ "%.6f"|format(result.vce) }} V</td></tr>
+                            <tr><th>VTH = VCC·R2/(R1+R2)</th><td>{{ display.vth.text }}</td><td>{{ "%.6f"|format(result.vth) }} V</td></tr>
+                            <tr><th>RTH = R1·R2/(R1+R2)</th><td>{{ display.rth.text }}</td><td>{{ "%.3f"|format(result.rth) }} Ω</td></tr>
+                            <tr><th>IB = (VTH−VBE)/(RTH+(β+1)RE)</th><td>{{ display.ib.text }}</td><td>{{ "%.6f"|format(result.ib) }} A</td></tr>
+                            <tr><th>IC = β·IB</th><td>{{ display.ic.text }}</td><td>{{ "%.6f"|format(result.ic) }} A</td></tr>
+                            <tr><th>IE = (β+1)·IB</th><td>{{ display.ie.text }}</td><td>{{ "%.6f"|format(result.ie) }} A</td></tr>
+                            <tr><th>VE = IE·RE</th><td>{{ display.ve.text }}</td><td>{{ "%.6f"|format(result.ve) }} V</td></tr>
+                            <tr><th>VB = VE + VBE</th><td>{{ display.vb.text }}</td><td>{{ "%.6f"|format(result.vb) }} V</td></tr>
+                            <tr><th>VC = VCC − IC·RC</th><td>{{ display.vc.text }}</td><td>{{ "%.6f"|format(result.vc) }} V</td></tr>
+                            <tr><th>VCE = VC − VE</th><td>{{ display.vce.text }}</td><td>{{ "%.6f"|format(result.vce) }} V</td></tr>
                         </tbody>
                     </table>
                 </div>

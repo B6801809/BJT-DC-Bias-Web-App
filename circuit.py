@@ -9,6 +9,15 @@
 
 from __future__ import annotations
 
+from units import (
+    AUTO,
+    CURRENT_UNITS,
+    VOLTAGE_UNITS,
+    auto_unit,
+    format_number,
+    format_value,
+)
+
 # สี/ค่าคงที่ของกราฟ
 VCE_SAT = 0.2  # V — ใช้เป็นจุดเริ่มต้นของย่าน Saturation ในกราฟ
 
@@ -39,27 +48,17 @@ def _esc(text: object) -> str:
 
 def _num(value: float, digits: int = 3) -> str:
     """Format ตัวเลขให้อ่านง่าย โดยตัดเลขศูนย์ท้ายที่ไม่จำเป็นออก"""
-    text = f"{value:.{digits}f}"
-    if "." in text:
-        text = text.rstrip("0").rstrip(".")
-    return text or "0"
+    return format_number(value, digits)
 
 
-def _resistance(ohms: float) -> str:
-    """แสดงค่าความต้านทานเป็น Ω หรือ kΩ ตามขนาด"""
-    if abs(ohms) >= 1000:
-        return f"{_num(ohms / 1000, 3)} kΩ"
-    return f"{_num(ohms, 2)} Ω"
-
-
-def _current(amps: float) -> str:
-    """แสดงค่ากระแสเป็น A, mA หรือ µA ตามขนาด"""
-    value = abs(amps)
-    if value >= 1:
-        return f"{_num(amps, 3)} A"
-    if value >= 1e-3:
-        return f"{_num(amps * 1e3, 3)} mA"
-    return f"{_num(amps * 1e6, 2)} µA"
+def _resolve_units(display_units: dict | None) -> dict:
+    """รวมค่าหน่วยที่ผู้ใช้เลือก พร้อมค่าเริ่มต้น (auto)"""
+    resolved = {"voltage": AUTO, "current": AUTO, "resistance": AUTO}
+    if display_units:
+        for key, value in display_units.items():
+            if key in resolved and value:
+                resolved[key] = value
+    return resolved
 
 
 def _ground(x: float, y: float, uid: str) -> str:
@@ -106,14 +105,18 @@ def schematic_svg(
     ve: float | None = None,
     vc: float | None = None,
     ic: float | None = None,
+    display_units: dict | None = None,
 ) -> str:
     """วาดภาพวงจร BJT NPN Common-Emitter แบบ Voltage-Divider Bias
 
     ค่าที่รับเข้ามาเป็นหน่วย SI (V, Ω, A) ส่วน vb/ve/vc/ic เป็นค่าที่คำนวณได้
     ถ้าต้องการแสดงบนภาพ (ถ้าไม่ส่งมาจะไม่แสดง)
+
+    display_units: หน่วยที่ใช้แสดงผล เช่น {"voltage": "mV", "current": "µA"}
     """
     p = PALETTE
     uid = "sch"
+    units = _resolve_units(display_units)
     parts: list[str] = []
 
     # --- โครงร่างพิกัด ---
@@ -139,24 +142,24 @@ def schematic_svg(
         f'<line x1="110" y1="{vcc_y}" x2="470" y2="{vcc_y}" stroke="{p["wire"]}" stroke-width="2.4"/>'
         f'<circle cx="110" cy="{vcc_y}" r="4" fill="{p["wire"]}"/>'
         f'<text x="150" y="{vcc_y - 14}" text-anchor="middle" font-size="14" font-weight="bold" '
-        f'fill="{p["label"]}">VCC = {_num(vcc, 2)} V</text>'
+        f'fill="{p["label"]}">VCC = {format_value(vcc, "voltage", units["voltage"])}</text>'
         f"</g>"
     )
 
     # --- R1 (VCC → Base) ---
     parts.append(f'<line x1="{x_r1}" y1="{vcc_y}" x2="{x_r1}" y2="70" stroke="{p["wire"]}" stroke-width="2.4"/>')
-    parts.append(_resistor(x_r1 - 11, 70, 22, 50, f"R1 = {_resistance(r1)}", uid))
+    parts.append(_resistor(x_r1 - 11, 70, 22, 50, f"R1 = {format_value(r1, 'resistance', units['resistance'])}", uid))
     parts.append(f'<line x1="{x_r1}" y1="120" x2="{x_r1}" y2="{base_y}" stroke="{p["wire"]}" stroke-width="2.4"/>')
 
     # --- R2 (Base → GND) ---
     parts.append(f'<line x1="{x_r1}" y1="{base_y}" x2="{x_r1}" y2="200" stroke="{p["wire"]}" stroke-width="2.4"/>')
-    parts.append(_resistor(x_r1 - 11, 200, 22, 50, f"R2 = {_resistance(r2)}", uid))
+    parts.append(_resistor(x_r1 - 11, 200, 22, 50, f"R2 = {format_value(r2, 'resistance', units['resistance'])}", uid))
     parts.append(f'<line x1="{x_r1}" y1="250" x2="{x_r1}" y2="{gnd_y}" stroke="{p["wire"]}" stroke-width="2.4"/>')
     parts.append(_ground(x_r1, gnd_y, uid))
 
     # --- RC (VCC → Collector) ---
     parts.append(f'<line x1="{x_rc}" y1="{vcc_y}" x2="{x_rc}" y2="70" stroke="{p["wire"]}" stroke-width="2.4"/>')
-    parts.append(_resistor(x_rc - 11, 70, 22, 50, f"RC = {_resistance(rc)}", uid))
+    parts.append(_resistor(x_rc - 11, 70, 22, 50, f"RC = {format_value(rc, 'resistance', units['resistance'])}", uid))
     parts.append(f'<line x1="{x_rc}" y1="120" x2="{x_rc}" y2="135" stroke="{p["wire"]}" stroke-width="2.4"/>')
 
     # --- ทรานซิสเตอร์ NPN ---
@@ -179,7 +182,7 @@ def schematic_svg(
 
     # --- RE (Emitter → GND) ---
     parts.append(f'<line x1="{x_re}" y1="225" x2="{x_re}" y2="265" stroke="{p["wire"]}" stroke-width="2.4"/>')
-    parts.append(_resistor(x_re - 11, 265, 22, 50, f"RE = {_resistance(re)}", uid))
+    parts.append(_resistor(x_re - 11, 265, 22, 50, f"RE = {format_value(re, 'resistance', units['resistance'])}", uid))
     parts.append(f'<line x1="{x_re}" y1="315" x2="{x_re}" y2="{gnd_y}" stroke="{p["wire"]}" stroke-width="2.4"/>')
     parts.append(_ground(x_re, gnd_y, uid))
 
@@ -197,28 +200,29 @@ def schematic_svg(
     if vb is not None:
         parts.append(
             f'<text x="168" y="{base_y - 8}" font-size="12.5" font-weight="bold" fill="{p["muted"]}">'
-            f"VB = {_num(vb, 3)} V</text>"
+            f"VB = {format_value(vb, 'voltage', units['voltage'])}</text>"
         )
     if vc is not None:
         parts.append(
             f'<text x="449" y="128" font-size="12.5" font-weight="bold" fill="{p["muted"]}">'
-            f"VC = {_num(vc, 3)} V</text>"
+            f"VC = {format_value(vc, 'voltage', units['voltage'])}</text>"
         )
     if ve is not None:
         parts.append(
             f'<text x="342" y="258" font-size="12.5" font-weight="bold" fill="{p["muted"]}">'
-            f"VE = {_num(ve, 3)} V</text>"
+            f"VE = {format_value(ve, 'voltage', units['voltage'])}</text>"
         )
     if ic is not None:
         parts.append(
             f'<text x="438" y="152" text-anchor="end" font-size="12.5" font-weight="bold" '
-            f'fill="{p["muted"]}">IC = {_current(ic)}</text>'
+            f'fill="{p["muted"]}">IC = {format_value(ic, 'current', units['current'])}</text>'
         )
 
     # --- ข้อมูลประจำทรานซิสเตอร์ ---
     parts.append(
         f'<text x="150" y="374" font-size="12.5" fill="{p["muted"]}">'
-        f"β = {_num(beta, 0)} · VBE = {_num(vbe, 2)} V · โหมด Forward-Active (β, VBE คงที่)"
+        f"β = {_num(beta, 0)} · VBE = {format_value(vbe, 'voltage', units['voltage'])} "
+        f"· โหมด Forward-Active (β, VBE คงที่)"
         f"</text>"
     )
 
@@ -259,6 +263,7 @@ def load_line_svg(
     ic: float,
     vce: float,
     region: str = "Forward-Active",
+    display_units: dict | None = None,
 ) -> str:
     """วาดกราฟ output characteristic ของทรานซิสเตอร์ร่วมกับ DC load line และจุด Q
 
@@ -268,6 +273,7 @@ def load_line_svg(
     """
     p = PALETTE
     uid = "ll"
+    units = _resolve_units(display_units)
 
     ic_sat_line = load_line_current(vcc, rc, re, beta, 0.0)
     ic_active = max(beta * ib, 0.0) if beta else 0.0
@@ -287,6 +293,10 @@ def load_line_svg(
     def Y(i: float) -> float:
         return bottom - (i / y_max) * height
 
+    # หน่วยที่ใช้แสดงบนแกนของกราฟ
+    vol_unit = units["voltage"] if units["voltage"] != AUTO else auto_unit(x_max, "voltage")
+    cur_unit = units["current"] if units["current"] != AUTO else auto_unit(y_max, "current")
+
     parts: list[str] = [
         f'<defs><marker id="{uid}-axis" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">'
         f'<path d="M0,0 L8,4 L0,8 Z" fill="{p["muted"]}"/></marker></defs>',
@@ -302,7 +312,7 @@ def load_line_svg(
         )
         parts.append(
             f'<text x="{x:.1f}" y="{bottom + 18}" text-anchor="middle" font-size="11" fill="{p["muted"]}">'
-            f"{_num(v, 1)}</text>"
+            f"{_num(v / VOLTAGE_UNITS[vol_unit], 1)}</text>"
         )
     for i in range(6):
         cur = y_max * i / 5
@@ -312,7 +322,7 @@ def load_line_svg(
         )
         parts.append(
             f'<text x="{left - 8}" y="{y + 4:.1f}" text-anchor="end" font-size="11" fill="{p["muted"]}">'
-            f"{_num(cur * 1e3, 2)}</text>"
+            f"{_num(cur / CURRENT_UNITS[cur_unit], 2)}</text>"
         )
 
     parts.append(
@@ -325,11 +335,11 @@ def load_line_svg(
     )
     parts.append(
         f'<text x="{right}" y="{bottom + 36}" text-anchor="end" font-size="12.5" font-weight="bold" '
-        f'fill="{p["label"]}">VCE (V)</text>'
+        f'fill="{p["label"]}">VCE ({vol_unit})</text>'
     )
     parts.append(
         f'<text x="{left - 52}" y="{top - 18}" font-size="12.5" font-weight="bold" fill="{p["label"]}">'
-        f"IC (mA)</text>"
+        f"IC ({cur_unit})</text>"
     )
 
     # --- DC load line: จาก (VCE=0, IC=ICsat) ไป (VCE=VCC, IC=0) ---
@@ -355,7 +365,7 @@ def load_line_svg(
         )
         parts.append(
             f'<text x="{X(VCE_SAT) + 8:.1f}" y="{Y(ic_active) - 10:.1f}" font-size="12" font-weight="bold" '
-            f'fill="{p["curve"]}">IC = β·IB = {_current(ic_active)}</text>'
+            f'fill="{p["curve"]}">IC = β·IB = {format_value(ic_active, "current", cur_unit)}</text>'
         )
     else:
         parts.append(
@@ -380,7 +390,10 @@ def load_line_svg(
         f"</g>"
     )
 
-    label = f"Q: VCE = {_num(vce, 3)} V, IC = {_current(ic)}"
+    label = (
+        f"Q: VCE = {format_value(vce, 'voltage', vol_unit)}, "
+        f"IC = {format_value(ic, 'current', cur_unit)}"
+    )
     if region != "Forward-Active":
         label += " (ประมาณการ — นอกย่าน Forward-Active)"
     # วางป้ายใต้จุด Q เพื่อไม่ให้ทับเส้นโค้งของทรานซิสเตอร์
@@ -415,10 +428,13 @@ def voltage_levels_svg(
     vb: float,
     ve: float,
     vce: float,
+    display_units: dict | None = None,
 ) -> str:
     """วาดแผนภาพแท่งแรงดันของโหนด VC, VB, VE เทียบกับ VCC"""
     p = PALETTE
     uid = "vl"
+    units = _resolve_units(display_units)
+    vol_unit = units["voltage"] if units["voltage"] != AUTO else auto_unit(vcc, "voltage")
 
     left = 110
     bar_max = 330
@@ -456,7 +472,7 @@ def voltage_levels_svg(
         )
         parts.append(
             f'<text x="{left + bar_max + 10}" y="{y + 20}" font-size="13.5" font-weight="bold" '
-            f'fill="{p["label"]}">{_num(value, 3)} V</text>'
+            f'fill="{p["label"]}">{format_value(value, "voltage", vol_unit)}</text>'
         )
 
     # เส้นแสดงระดับ VCC
@@ -467,11 +483,11 @@ def voltage_levels_svg(
     )
     parts.append(
         f'<text x="{left}" y="{y_vcc + 8}" font-size="12.5" font-weight="bold" fill="{p["muted"]}">'
-        f"VCC = {_num(vcc, 2)} V (ระดับอ้างอิง)</text>"
+        f"VCC = {format_value(vcc, 'voltage', vol_unit)} (ระดับอ้างอิง)</text>"
     )
     parts.append(
         f'<text x="{left}" y="{y_vcc + 30}" font-size="12.5" fill="{p["muted"]}">'
-        f"VCE = VC − VE = {_num(vce, 3)} V</text>"
+        f"VCE = VC − VE = {format_value(vce, 'voltage', vol_unit)}</text>"
     )
 
     return (

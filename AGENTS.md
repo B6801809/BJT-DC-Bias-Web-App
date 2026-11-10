@@ -2,11 +2,19 @@
 
 ## หลักการ
 
-- แยกความรับผิดชอบตามไฟล์: `app.py` (HTTP/Flask), `dc_bias.py` (วิศวกรรม), `circuit.py` (ภาพ SVG), `templates/` (HTML), `static/` (CSS/JS), `tests/` (การทดสอบ)
+- แยกความรับผิดชอบตามไฟล์: `app.py` (HTTP/Flask), `dc_bias.py` (วิศวกรรม), `units.py` (หน่วย), `circuit.py` (ภาพ SVG), `templates/` (HTML), `static/` (CSS/JS), `tests/` (การทดสอบ)
 - `dc_bias.py` ต้องไม่ import Flask หรือรู้จัก HTML/HTTP
 - `circuit.py` ต้องคืนค่าเป็นข้อความ SVG เท่านั้น และห้าม import Flask เช่นกัน
 - ห้ามฝังสมการฟิสิกส์หรือค่าคำตอบไว้ใน template
 - ทุกการเปลี่ยนตรรกะคำนวณต้องมี test รองรับ
+
+## หน่วย
+
+- **ภายในระบบคำนวณใช้หน่วย SI เท่านั้น** (V, Ω, A) — `dc_bias.py` ห้ามรับหน่วยอื่น
+- การแปลงหน่วยขาเข้าทำที่ `app._parse_inputs` ผ่าน `units.to_si()`
+- การจัดรูปแบบผลลัพธ์ทำที่ `app._build_display` ผ่าน `units.split_value()`
+- ห้ามแปลงหน่วยซ้ำในชั้น template หรือใน `circuit.py`
+- หน่วยที่เพิ่มใหม่ต้องเพิ่มใน `units.py` และมี test ครับ
 
 ## ภาพประกอบ (SVG)
 

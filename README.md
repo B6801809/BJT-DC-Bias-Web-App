@@ -8,6 +8,7 @@ Common-Emitter แบบ **Voltage-Divider Bias** (ENG29 2121 · Lab 02)
 - Frontend: ฟอร์ม HTML + CSS (Jinja template)
 - Backend: Flask รับ HTTP request แล้วเรียกฟังก์ชันคำนวณใน Python
 - Engineering logic แยกอยู่ใน `dc_bias.py` (ไม่รู้จัก HTML/HTTP)
+- **เลือกหน่วยขาเข้าและหน่วยแสดงผลได้** ผ่าน `units.py` (คำนวณภายในยังใช้หน่วย SI เสมอ)
 - ภาพประกอบสร้างเองใน `circuit.py` เป็น SVG (ภาพวงจร, กราฟ DC load line, แผนภาพระดับแรงดัน) — ไม่ต้องใช้ไลบรารีภายนอก
 - มี automated tests ทั้ง unit test, figure test และ Flask HTTP test
 
@@ -52,6 +53,35 @@ python -m flask --app app run --debug
 > ปุ่ม **ใส่ค่าตัวอย่าง** จะกรอกค่าชุดมาตรฐานให้อัตโนมัติ เพื่อทดสอบได้เร็ว
 > ปุ่ม **ล้างฟอร์ม** จะเคลียร์ค่าทั้งหมด
 > กด **ดูรายละเอียดผลการคำนวณ** เพื่อดูค่ากลางของสมการทุกขั้นตอน
+
+## การเลือกหน่วย
+
+### หน่วยขาเข้า (ตัวเลือกถัดจากช่องกรอก)
+
+| ช่อง | หน่วยที่เลือกได้ |
+|---|---|
+| VCC, VBE | V, mV |
+| R1, R2, RC, RE | Ω, kΩ, MΩ |
+| β | ไม่มีหน่วย |
+
+ตัวอย่าง: ถ้ากรอก R1 = 100 และเลือกหน่วย `kΩ` จะเท่ากับ 100,000 Ω
+แต่ถ้าเลือก `Ω` ต้องกรอก 100000 ให้ได้ค่าเดียวกัน
+
+### หน่วยขาออก (ส่วน "หน่วยที่ใช้แสดงผล")
+
+| ตัวเลือก | ตัวอย่างผลลัพธ์ |
+|---|---|
+| แรงดัน = อัตโนมัติ | VB = 1.942 V |
+| แรงดัน = mV | VB = 1942.157 mV |
+| กระแส = อัตโนมัติ | IC = 1.23 mA, IB = 12.3 µA |
+| กระแส = A | IC = 0.001 A, IB = 0.000012 A |
+
+- โหมด **อัตโนมัติ** จะเลือกหน่วยที่เหมาะสมให้แต่ละค่อยโดยอัตโนมัติ
+- ตารางรายละเอียดจะแสดงทั้งค่าตามหน่วยที่เลือก และค่า SI เทียบกัน
+- หน่วยที่เลือกจะถูกใช้กับภาพวงจรและกราฟด้วย
+
+> ภายในระบบคำนวณทุกอย่างอยู่ในหน่วย SI (V, Ω, A) เสมอ
+> การแปลงหน่วยทำที่ขอบระบบใน `app.py` ผ่าน `units.to_si()`
 
 ### ค่าตัวอย่างสำหรับทดสอบ
 
@@ -124,7 +154,7 @@ VCE = VC − VE
 python -m unittest discover -s tests -v
 ```
 
-ปัจจุบันมี 26 tests: ตรรกะวิศวกรรม, การสร้างภาพ SVG, ความสอดคล้องของจุด Q กับ load line และ Flask HTTP routes
+ปัจจุบันมี 38 tests: ตรรกะวิศวกรรม, การแปลงหน่วย, การสร้างภาพ SVG, ความสอดคล้องของจุด Q กับ load line และ Flask HTTP routes
 
 ## แก้ปัญหาที่พบบ่อย
 
@@ -140,8 +170,9 @@ python -m unittest discover -s tests -v
 
 ```
 BJT DC Bias Web App/
-├── app.py                  # Flask routes
-├── dc_bias.py              # Engineering calculations
+├── app.py                  # Flask routes + แปลงหน่วยขาเข้า
+├── dc_bias.py              # Engineering calculations (หน่วย SI)
+├── units.py                # แปลงหน่วย + จัดรูปแบบผลลัพธ์
 ├── circuit.py              # สร้าง SVG: ภาพวงจร, DC load line, ระดับแรงดัน
 ├── templates/index.html    # Input form + results (Jinja)
 ├── static/
@@ -150,6 +181,7 @@ BJT DC Bias Web App/
 │   └── favicon.svg         # ไอคอนเว็บ
 ├── tests/
 │   ├── test_dc_bias.py     # Unit tests (engineering math)
+│   ├── test_units.py       # Unit tests (แปลงหน่วย)
 │   ├── test_circuit.py     # Figure tests (SVG + จุด Q บน load line)
 │   └── test_web.py         # Flask HTTP tests
 ├── docs/

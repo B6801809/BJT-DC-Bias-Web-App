@@ -39,26 +39,33 @@ Common-Emitter แบบ Voltage-Divider Bias ภายในขอบเขต 
    - เหตุผล: ติดตั้ง matplotlib ไม่จำเป็นกับงาน DC bias ขนาดเล็ก และเพิ่มความเสี่ยงตอนติดตั้ง dependency ในคาบ
    - ภาพที่วาด: (1) ภาพวงจร, (2) กราฟ DC load line + จุด Q, (3) แผนภาพระดับแรงดัน
    - จุด Q บนกราฟคำนวณจาก DC load line จริง (รวมผลของ RE ผ่าน IE = IC·(β+1)/β) จึงตรงกับค่าที่ `dc_bias.py` คำนวณได้เสมอ
+7. **รองรับการเลือกหน่วย แต่คำนวณภายในด้วยหน่วย SI เสมอ**
+   - `units.py` เป็นโมดูลเดียวที่รู้เรื่องหน่วย (แปลงเข้า SI และจัดรูปแบบผลลัพธ์)
+   - ผู้ใช้เลือกหน่วยขาเข้าได้ต่อช่อง (V/mV, Ω/kΩ/MΩ) และเลือกหน่วยแสดงผลได้ (อัตโนมัติ หรือ หน่วยเดียว)
+   - `dc_bias.py` ไม่เปลี่ยนแปลงเลย — รับ/คืนหน่วย SI เหมือนเดิม ลดความเสี่ยงจากหน่วยผิด
+   - ผลลัพธ์แสดงค่าที่เลือกพร้อมค่า SI เทียบกันในตารางรายละเอียด
 
 ## Data Flow
 
 ```
-Browser form
+Browser form (ค่า + หน่วย)
   -> POST / (Flask)
-  -> app._parse_inputs (kΩ -> Ω, validation)
-  -> dc_bias.calculate_dc_bias      (ผลลัพธ์ตัวเลข)
-  -> circuit.schematic_svg           (ภาพวงจร)
-  -> circuit.load_line_svg           (กราฟ load line + จุด Q)
-  -> circuit.voltage_levels_svg      (ระดับแรงดัน)
-  -> render_template(index.html, result=..., schematic=..., loadline=..., levels=...)
+  -> app._parse_inputs          (แปลงหน่วยเข้า -> SI, validation)
+  -> dc_bias.calculate_dc_bias  (ผลลัพธ์ตัวเลขในหน่วย SI)
+  -> app._build_display         (ข้อความผลลัพธ์ตามหน่วยที่เลือก)
+  -> circuit.schematic_svg      (ภาพวงจร)
+  -> circuit.load_line_svg      (กราฟ load line + จุด Q)
+  -> circuit.voltage_levels_svg (ระดับแรงดัน)
+  -> render_template(index.html, result=..., display=..., schematic=..., loadline=..., levels=...)
   -> Browser แสดงผล
 ```
 
 ## โครงสร้างไฟล์
 
-- `app.py` — routes, parsing, validation ระดับ HTTP, เรียก `circuit.py`
-- `dc_bias.py` — สมการและการตัดสินโซนการทำงาน
+- `app.py` — routes, parsing, แปลงหน่วย, validation ระดับ HTTP, เรียก `circuit.py`
+- `dc_bias.py` — สมการและการตัดสินโซนการทำงาน (หน่วย SI)
+- `units.py` — ตารางหน่วย, การแปลง SI, การจัดรูปแบบข้อความ
 - `circuit.py` — สร้าง SVG (ภาพวงจร, load line, ระดับแรงดัน)
 - `templates/index.html` — ฟอร์มและผลลัพธ์
 - `static/style.css` — responsive layout
-- `tests/` — unit + figure + HTTP tests
+- `tests/` — unit + units + figure + HTTP tests

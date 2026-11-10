@@ -5,12 +5,23 @@
 
     var EXAMPLE = {
         vcc: "12",
+        vbe: "0.70",
         r1: "100",
         r2: "22",
         rc: "2.2",
         re: "1",
-        beta: "100",
-        vbe: "0.70"
+        beta: "100"
+    };
+
+    var EXAMPLE_UNITS = {
+        vcc_unit: "V",
+        vbe_unit: "V",
+        r1_unit: "kΩ",
+        r2_unit: "kΩ",
+        rc_unit: "kΩ",
+        re_unit: "kΩ",
+        voltage_display: "auto",
+        current_display: "auto"
     };
 
     var form = document.getElementById("bias-form");
@@ -28,6 +39,12 @@
                     field.classList.remove("invalid");
                 }
             });
+            Object.keys(EXAMPLE_UNITS).forEach(function (name) {
+                var field = form.elements[name];
+                if (field && field.tagName === "SELECT") {
+                    field.value = EXAMPLE_UNITS[name];
+                }
+            });
         });
     }
 
@@ -35,7 +52,9 @@
         var missing = [];
 
         Array.prototype.forEach.call(form.elements, function (field) {
-            if (!field.name || field.type === "button" || field.type === "reset") {
+            // ข้ามปุ่มและตัวเลือกหน่วย (ไม่ใช่ค่าตัวเลข)
+            if (!field.name || field.type === "button" || field.type === "reset" ||
+                field.type === "select-one" || field.tagName === "SELECT") {
                 return;
             }
             var value = (field.value || "").trim();

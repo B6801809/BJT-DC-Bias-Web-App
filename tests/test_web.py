@@ -103,6 +103,48 @@ class TestFlaskRoutes(unittest.TestCase):
         self.assertEqual(data["region"], "Forward-Active")
         self.assertAlmostEqual(data["ic"], 1.229858e-3, places=8)
 
+    def test_same_result_with_different_input_units(self):
+        """A3: หน่วยขาเข้าต่างกัน แต่ค่าที่กรอกเท่ากัน ต้องได้ผลเหมือนกัน"""
+        in_ohm = {
+            "vcc": "12", "vcc_unit": "V",
+            "vbe": "0.70", "vbe_unit": "V",
+            "r1": "100000", "r1_unit": "Ω",
+            "r2": "22000", "r2_unit": "Ω",
+            "rc": "2200", "rc_unit": "Ω",
+            "re": "1000", "re_unit": "Ω",
+            "beta": "100",
+        }
+        response = self.client.post("/", data=in_ohm)
+        body = response.get_data(as_text=True)
+        self.assertIn("Forward-Active", body)
+        self.assertIn("1.23", body)      # IC เท่าเดิม
+        self.assertIn("8.052", body)     # VCE เท่าเดิม
+
+    def test_millivolt_input_is_converted(self):
+        """ค่าแรงดันที่กรอกเป็น mV ต้องถูกแปลงเป็น V ก่อนคำนวณ"""
+        data = dict(VALID_FORM, vcc="12000", vcc_unit="mV")
+        response = self.client.post("/", data=data)
+        body = response.get_data(as_text=True)
+        self.assertIn("Forward-Active", body)
+        self.assertIn("8.052", body)
+
+    def test_display_unit_selection(self):
+        """เลือกหน่วยแสดงผลเป็น mV และ µA ต้องเปลี่ยนข้อความที่แสดง"""
+        data = dict(VALID_FORM, voltage_display="mV", current_display="µA")
+        response = self.client.post("/", data=data)
+        body = response.get_data(as_text=True)
+        self.assertIn("1942.157 mV", body)
+        self.assertIn("1229.858 µA", body)
+
+    def test_api_accepts_unit_fields(self):
+        """API ต้องรับหน่วยขาเข้าและคืนหน่วยที่เลือกไว้"""
+        payload = dict(VALID_FORM, r1_unit="Ω", r1="100000")
+        response = self.client.post("/api/calculate", json=payload)
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["units"]["r1_unit"], "Ω")
+        self.assertAlmostEqual(data["ic"], 1.229858e-3, places=8)
+
 
 if __name__ == "__main__":
     unittest.main()
