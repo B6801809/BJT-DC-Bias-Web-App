@@ -8,7 +8,8 @@ Common-Emitter แบบ **Voltage-Divider Bias** (ENG29 2121 · Lab 02)
 - Frontend: ฟอร์ม HTML + CSS (Jinja template)
 - Backend: Flask รับ HTTP request แล้วเรียกฟังก์ชันคำนวณใน Python
 - Engineering logic แยกอยู่ใน `dc_bias.py` (ไม่รู้จัก HTML/HTTP)
-- มี automated tests ทั้ง unit test และ Flask HTTP test
+- ภาพประกอบสร้างเองใน `circuit.py` เป็น SVG (ภาพวงจร, กราฟ DC load line, แผนภาพระดับแรงดัน) — ไม่ต้องใช้ไลบรารีภายนอก
+- มี automated tests ทั้ง unit test, figure test และ Flask HTTP test
 
 ## ข้อกำหนดเบื้องต้น
 
@@ -46,6 +47,7 @@ python -m flask --app app run --debug
 3. กด **Calculate DC Bias**
 4. ระบบจะแสดง VB, VE, VC, VCE (V), IB (μA), IC/IE (mA), VTH, RTH และโซนการทำงาน
 5. หากอินพุตผิดหรืออยู่นอกย่าน Forward-Active จะมี Error/Warning แจ้ง
+6. ด้านล่างจะแสดง **ภาพวงจร** ที่ใช้คำนวณ, **กราฟ DC load line** พร้อมจุด Q และ **แผนภาพระดับแรงดัน** ของแต่ละโหนด
 
 > ปุ่ม **ใส่ค่าตัวอย่าง** จะกรอกค่าชุดมาตรฐานให้อัตโนมัติ เพื่อทดสอบได้เร็ว
 > ปุ่ม **ล้างฟอร์ม** จะเคลียร์ค่าทั้งหมด
@@ -85,6 +87,21 @@ python -m flask --app app run --debug
 
 ![การแสดง Error](docs/screenshot-error.png)
 
+### ภาพวงจร กราฟ DC load line และระดับแรงดัน
+
+![ภาพวงจรและกราฟ](docs/screenshot-figures.png)
+
+## ภาพประกอบที่แสดง
+
+| ภาพ | รายละเอียด |
+|---|---|
+| **ภาพวงจร** | วงจร BJT NPN Voltage-Divider Bias พร้อมค่าที่กรอกและค่าแรงดันที่คำนวณได้ (VB, VE, VC, IC) |
+| **กราฟ DC load line** | เส้น load line (VCC → RC/RE) ตัดกับเส้นโค้ง output characteristic (IC = β·IB) พร้อมจุด Q ที่ตรงกับค่าที่คำนวณได้ |
+| **แผนภาพระดับแรงดัน** | แถบเทียบระดับ VC, VB, VE กับ VCC เพื่อดูว่าอยู่ในช่วงที่สมเหตุสมผลหรือไม่ |
+
+ทุกภาพสร้างจากค่าที่ผู้ใช้กรอกจริง โดย `circuit.py` คืนค่าเป็นข้อความ SVG
+(ไม่พึ่ง matplotlib หรือไลบรารีภายนอก) และทดสอบความถูกต้องได้ด้วย `tests/test_circuit.py`
+
 ## สมการที่ใช้
 
 ```
@@ -107,6 +124,8 @@ VCE = VC − VE
 python -m unittest discover -s tests -v
 ```
 
+ปัจจุบันมี 26 tests: ตรรกะวิศวกรรม, การสร้างภาพ SVG, ความสอดคล้องของจุด Q กับ load line และ Flask HTTP routes
+
 ## แก้ปัญหาที่พบบ่อย
 
 | อาการ | วิธีแก้ |
@@ -123,18 +142,22 @@ python -m unittest discover -s tests -v
 BJT DC Bias Web App/
 ├── app.py                  # Flask routes
 ├── dc_bias.py              # Engineering calculations
+├── circuit.py              # สร้าง SVG: ภาพวงจร, DC load line, ระดับแรงดัน
 ├── templates/index.html    # Input form + results (Jinja)
 ├── static/
 │   ├── style.css           # Layout / presentation
-│   └── app.js              # ปุ่มใส่ค่าตัวอย่าง + ตรวจ input เบื้องต้น
+│   ├── app.js              # ปุ่มใส่ค่าตัวอย่าง + ตรวจ input เบื้องต้น
+│   └── favicon.svg         # ไอคอนเว็บ
 ├── tests/
 │   ├── test_dc_bias.py     # Unit tests (engineering math)
+│   ├── test_circuit.py     # Figure tests (SVG + จุด Q บน load line)
 │   └── test_web.py         # Flask HTTP tests
 ├── docs/
 │   ├── design-note.md
 │   ├── validation.md
 │   ├── reflection.md
 │   ├── screenshot-result.png
+│   ├── screenshot-figures.png
 │   └── screenshot-error.png
 ├── .vscode/launch.json     # เรียกใช้ Flask debug server และเปิด Chrome
 ├── requirements.txt

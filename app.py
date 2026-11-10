@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from flask import Flask, jsonify, render_template, request
 
+from circuit import load_line_svg, schematic_svg, voltage_levels_svg
 from dc_bias import calculate_dc_bias
 
 app = Flask(__name__)
@@ -12,6 +13,17 @@ app = Flask(__name__)
 KILO = 1000.0
 
 REQUIRED_FIELDS = ("vcc", "r1", "r2", "rc", "re", "beta")
+
+# ค่าตัวอย่างสำหรับแสดงภาพวงจรตอนเปิดหน้าเว็บครั้งแรก
+EXAMPLE = {
+    "vcc": 12.0,
+    "r1": 100_000.0,
+    "r2": 22_000.0,
+    "rc": 2_200.0,
+    "re": 1_000.0,
+    "beta": 100.0,
+    "vbe": 0.70,
+}
 
 
 def _parse_inputs(data) -> dict:
@@ -59,26 +71,66 @@ def _parse_inputs(data) -> dict:
     }
 
 
+def _build_figures(params: dict, result: dict | None) -> dict:
+    """สร้าง SVG ทั้งหมด (ภาพวงจร, load line, ระดับแรงดัน) จากค่าที่คำนวณได้"""
+    loadline = None
+    levels = None
+
+    if result and "error" not in result:
+        schematic = schematic_svg(
+            **params,
+            vb=result["vb"],
+            ve=result["ve"],
+            vc=result["vc"],
+            ic=result["ic"],
+        )
+        loadline = load_line_svg(
+            vcc=params["vcc"],
+            rc=params["rc"],
+            re=params["re"],
+            beta=params["beta"],
+            ib=result["ib"],
+            ic=result["ic"],
+            vce=result["vce"],
+            region=result["region"],
+        )
+        levels = voltage_levels_svg(
+            vcc=params["vcc"],
+            vc=result["vc"],
+            vb=result["vb"],
+            ve=result["ve"],
+            vce=result["vce"],
+        )
+    else:
+        schematic = schematic_svg(**params)
+
+    return {"schematic": schematic, "loadline": loadline, "levels": levels}
+
+
 @app.route("/", methods=["GET"])
 def index():
-    """แสดงหน้าฟอร์มรับค่าอินพุต."""
-    return render_template("index.html", result=None, form={})
+    """แสดงหน้าฟอร์มรับค่าอินพุต พร้อมภาพวงจรตัวอย่าง"""
+    figures = _build_figures(EXAMPLE, None)
+    return render_template("index.html", result=None, form={}, **figures)
 
 
 @app.route("/", methods=["POST"])
 def calculate():
-    """รับค่าจากฟอร์ม คำนวณ DC Bias แล้วแสดงผลในหน้าเดิม."""
+    """รับค่าจากฟอร์ม คำนวณ DC Bias แล้วแสดงผลพร้อมภาพประกอบในหน้าเดิม"""
     try:
         params = _parse_inputs(request.form)
     except ValueError as exc:
+        figures = _build_figures(EXAMPLE, None)
         return render_template(
             "index.html",
             result={"error": str(exc), "region": "Error"},
             form=request.form,
+            **figures,
         )
 
     result = calculate_dc_bias(**params)
-    return render_template("index.html", result=result, form=request.form)
+    figures = _build_figures(params, result)
+    return render_template("index.html", result=result, form=request.form, **figures)
 
 
 @app.route("/api/calculate", methods=["POST"])

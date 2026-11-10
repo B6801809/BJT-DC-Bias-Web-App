@@ -34,6 +34,11 @@ Common-Emitter แบบ Voltage-Divider Bias ภายในขอบเขต 
    - ถ้าอยู่นอก Forward-Active ยังแสดงตัวเลขได้ แต่ต้องมี Warning ชัดเจน
 5. **Template ไม่มีสมการ**
    - `index.html` ทำหน้าที่แสดงผลเท่านั้น
+6. **ภาพประกอบสร้างเองด้วย SVG (ไม่พึ่งไลบรารีภายนอก)**
+   - `circuit.py` คืนค่าเป็นข้อความ SVG ล้วน ๆ
+   - เหตุผล: ติดตั้ง matplotlib ไม่จำเป็นกับงาน DC bias ขนาดเล็ก และเพิ่มความเสี่ยงตอนติดตั้ง dependency ในคาบ
+   - ภาพที่วาด: (1) ภาพวงจร, (2) กราฟ DC load line + จุด Q, (3) แผนภาพระดับแรงดัน
+   - จุด Q บนกราฟคำนวณจาก DC load line จริง (รวมผลของ RE ผ่าน IE = IC·(β+1)/β) จึงตรงกับค่าที่ `dc_bias.py` คำนวณได้เสมอ
 
 ## Data Flow
 
@@ -41,15 +46,19 @@ Common-Emitter แบบ Voltage-Divider Bias ภายในขอบเขต 
 Browser form
   -> POST / (Flask)
   -> app._parse_inputs (kΩ -> Ω, validation)
-  -> dc_bias.calculate_dc_bias
-  -> render_template(index.html, result)
+  -> dc_bias.calculate_dc_bias      (ผลลัพธ์ตัวเลข)
+  -> circuit.schematic_svg           (ภาพวงจร)
+  -> circuit.load_line_svg           (กราฟ load line + จุด Q)
+  -> circuit.voltage_levels_svg      (ระดับแรงดัน)
+  -> render_template(index.html, result=..., schematic=..., loadline=..., levels=...)
   -> Browser แสดงผล
 ```
 
 ## โครงสร้างไฟล์
 
-- `app.py` — routes, parsing, validation ระดับ HTTP
+- `app.py` — routes, parsing, validation ระดับ HTTP, เรียก `circuit.py`
 - `dc_bias.py` — สมการและการตัดสินโซนการทำงาน
+- `circuit.py` — สร้าง SVG (ภาพวงจร, load line, ระดับแรงดัน)
 - `templates/index.html` — ฟอร์มและผลลัพธ์
 - `static/style.css` — responsive layout
-- `tests/` — unit + HTTP tests
+- `tests/` — unit + figure + HTTP tests

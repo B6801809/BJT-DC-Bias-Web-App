@@ -39,6 +39,24 @@ class TestFlaskRoutes(unittest.TestCase):
         self.assertIn("Calculate DC Bias", body)
         self.assertIn('name="vcc"', body)
 
+    def test_index_get_includes_circuit_schematic(self):
+        """GET / ต้องแสดงภาพวงจร SVG พร้อมค่าตัวอย่าง"""
+        response = self.client.get("/")
+        body = response.get_data(as_text=True)
+        self.assertIn("<svg", body)
+        self.assertIn("figure-svg", body)
+        self.assertIn("Q1 (NPN)", body)
+
+    def test_calculate_renders_all_figures(self):
+        """POST / ต้องแสดงภาพวงจร, load line และระดับแรงดัน"""
+        response = self.client.post("/", data=VALID_FORM)
+        body = response.get_data(as_text=True)
+        self.assertEqual(body.count("<svg"), 3)
+        self.assertIn("DC Load Line", body)
+        self.assertIn("Q: VCE", body)
+        self.assertIn("VB = 1.942 V", body)
+        self.assertIn("IC = 1.23 mA", body)
+
     def test_calculate_valid_form(self):
         """A2: POST / ด้วยค่าถูกต้อง ต้องคำนวณและแสดงผลจาก Backend"""
         response = self.client.post("/", data=VALID_FORM)

@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>BJT DC Bias Calculator</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -176,6 +177,49 @@
                 </div>
             </details>
             {% endif %}
+        </section>
+        {% endif %}
+
+        {% if schematic %}
+        <section class="card">
+            <div class="kicker">03 / VISUALIZATION</div>
+            <h2>ภาพวงจรและกราฟที่ใช้ในการคำนวณ</h2>
+
+            <div class="figures">
+                <figure class="figure">
+                    {{ schematic | safe }}
+                    <figcaption>
+                        วงจร BJT NPN Common-Emitter แบบ Voltage-Divider Bias — R1 ต่อ VCC–Base,
+                        R2 ต่อ Base–Ground, RC ต่อ VCC–Collector, RE ต่อ Emitter–Ground
+                        {% if result and not result.error %}
+                        (ค่าที่แสดงคือค่าจากฟอร์มที่กรอกล่าสุด)
+                        {% else %}
+                        (แสดงค่าตัวอย่างมาตรฐาน — กด Calculate DC Bias เพื่อดูภาพตามค่าจริง)
+                        {% endif %}
+                    </figcaption>
+                </figure>
+
+                {% if loadline %}
+                <figure class="figure">
+                    {{ loadline | safe }}
+                    <figcaption>
+                        กราฟ DC load line กับเส้นโค้ง output characteristic (IC = β·IB)
+                        จุดตัดของทั้งสองเส้นคือจุดทำงาน Q — จุดนี้ต้องตรงกับค่า VCE และ IC
+                        ที่คำนวณได้จาก Python Backend
+                    </figcaption>
+                </figure>
+                {% endif %}
+
+                {% if levels %}
+                <figure class="figure">
+                    {{ levels | safe }}
+                    <figcaption>
+                        ระดับแรงดันของแต่ละโหนดเทียบกับ VCC — ใช้ตรวจสอบว่า
+                        VC, VB และ VE อยู่ในช่วงที่สมเหตุสมผลหรือไม่
+                    </figcaption>
+                </figure>
+                {% endif %}
+            </div>
         </section>
         {% endif %}
     </main>
