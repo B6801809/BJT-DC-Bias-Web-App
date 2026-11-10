@@ -47,6 +47,10 @@ python -m flask --app app run --debug
 4. ระบบจะแสดง VB, VE, VC, VCE (V), IB (μA), IC/IE (mA), VTH, RTH และโซนการทำงาน
 5. หากอินพุตผิดหรืออยู่นอกย่าน Forward-Active จะมี Error/Warning แจ้ง
 
+> ปุ่ม **ใส่ค่าตัวอย่าง** จะกรอกค่าชุดมาตรฐานให้อัตโนมัติ เพื่อทดสอบได้เร็ว
+> ปุ่ม **ล้างฟอร์ม** จะเคลียร์ค่าทั้งหมด
+> กด **ดูรายละเอียดผลการคำนวณ** เพื่อดูค่ากลางของสมการทุกขั้นตอน
+
 ### ค่าตัวอย่างสำหรับทดสอบ
 
 | พารามิเตอร์ | ค่า |
@@ -71,6 +75,16 @@ python -m flask --app app run --debug
 | VC | 9.294 V |
 | VCE | 8.052 V |
 
+## ภาพหน้าจอ
+
+### ผลลัพธ์ DC Bias (ค่าตัวอย่าง)
+
+![ผลลัพธ์ DC Bias](docs/screenshot-result.png)
+
+### การแสดง Error เมื่อกรอกค่าผิด
+
+![การแสดง Error](docs/screenshot-error.png)
+
 ## สมการที่ใช้
 
 ```
@@ -93,6 +107,16 @@ VCE = VC − VE
 python -m unittest discover -s tests -v
 ```
 
+## แก้ปัญหาที่พบบ่อย
+
+| อาการ | วิธีแก้ |
+|---|---|
+| `ModuleNotFoundError: No module named 'flask'` | ยังไม่ได้ activate venv หรือยังไม่ได้ `pip install -r requirements.txt` |
+| พิมพ์ `.venv\Scripts\Activate.ps1` แล้ว error | รัน `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned` แล้วลองใหม่ |
+| `CommandNotFoundException` ตอน activate | อยู่ใน PowerShell แต่พิมพ์ path แบบ Git Bash (`/c:/Users/...`) — ต้องใช้ `.\.venv\Scripts\Activate.ps1` |
+| เว็บเปิดไม่ได้ | ต้องรันผ่าน Flask server ที่ `http://127.0.0.1:5000/` ไม่ใช่เปิดไฟล์ `templates/index.html` ตรง ๆ |
+| Port 5000 ถูกใช้ | เปลี่ยนเป็น `--port 5001` ตอนรัน |
+
 ## โครงสร้างโปรเจกต์
 
 ```
@@ -100,14 +124,19 @@ BJT DC Bias Web App/
 ├── app.py                  # Flask routes
 ├── dc_bias.py              # Engineering calculations
 ├── templates/index.html    # Input form + results (Jinja)
-├── static/style.css        # Layout / presentation
+├── static/
+│   ├── style.css           # Layout / presentation
+│   └── app.js              # ปุ่มใส่ค่าตัวอย่าง + ตรวจ input เบื้องต้น
 ├── tests/
 │   ├── test_dc_bias.py     # Unit tests (engineering math)
 │   └── test_web.py         # Flask HTTP tests
 ├── docs/
 │   ├── design-note.md
 │   ├── validation.md
-│   └── reflection.md
+│   ├── reflection.md
+│   ├── screenshot-result.png
+│   └── screenshot-error.png
+├── .vscode/launch.json     # เรียกใช้ Flask debug server และเปิด Chrome
 ├── requirements.txt
 ├── AGENTS.md
 └── README.md

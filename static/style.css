@@ -1,4 +1,4 @@
-/* Responsponsive layout สำหรับ BJT DC Bias Calculator */
+/* Responsive layout สำหรับ BJT DC Bias Calculator */
 
 /* --- Reset & Base --- */
 :root {
@@ -10,6 +10,7 @@
     --muted: #546d83;
     --line: #d3e0ec;
     --orange: #b85c2c;
+    --green: #178875;
 }
 
 * {
@@ -20,7 +21,7 @@ body {
     background: var(--paper);
     color: var(--ink);
     margin: 0;
-    font: 16px/1.76 Tahoma, "Noto Sans Thai", Leelawadee UI, Arial, sans-serif;
+    font: 16px/1.76 Tahoma, "Noto Sans Thai", "Leelawadee UI", Arial, sans-serif;
 }
 
 p {
@@ -29,6 +30,17 @@ p {
 
 a {
     color: #1264a0;
+}
+
+h3 {
+    color: #155a78;
+    font-size: 1.05rem;
+    margin: 19px 0 9px;
+}
+
+.muted {
+    color: var(--muted);
+    font-size: 14px;
 }
 
 /* --- Hero Section --- */
@@ -55,59 +67,22 @@ main {
     color: #ddf0fd;
 }
 
-/* --- Form Layout --- */
-.row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-bottom: 15px;
-}
-
-.row > div {
-    flex: 1;
-    min-width: 200px;
-}
-
-label {
-    display: block;
-    margin-bottom: 5px;
+.eyebrow {
+    font-size: 13px;
+    color: #d2ecfa;
     font-weight: bold;
-    color: var(--ink);
 }
 
-input[type="number"] {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    font-size: 14px;
-    background: white;
-    transition: border-color 0.3s;
-}
-
-input[type="number"]:focus {
-    outline: none;
-    border-color: var(--blue);
-    box-shadow: 0 0 0 3px rgba(29, 99, 139, 0.1);
-}
-
-/* --- Buttons --- */
-.btn {
+.tag {
     display: inline-block;
-    padding: 10px 24px;
-    background: var(--blue);
-    color: white;
-    border: none;
-    border-radius: 5px;
-    font-size: 14px;
     font-weight: bold;
-    cursor: pointer;
-    transition: background 0.3s;
-    margin-top: 15px;
-}
-
-.btn:hover {
-    background: var(--teal);
+    font-size: 12px;
+    color: #eaf8ff;
+    border: 1px solid #6fa8c9;
+    background: #ffffff15;
+    margin: 12px 8px 0 0;
+    padding: 5px 10px;
+    border-radius: 5px;
 }
 
 /* --- Card --- */
@@ -133,11 +108,155 @@ input[type="number"]:focus {
     color: var(--blue);
 }
 
+/* --- Form Layout --- */
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.row > div {
+    flex: 1;
+    min-width: 200px;
+}
+
+.col-6 {
+    flex: 0 1 calc(50% - 6px);
+    min-width: 220px;
+}
+
+.col-12 {
+    flex: 1 1 100%;
+}
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: var(--ink);
+}
+
+.hint {
+    display: block;
+    font-size: 12.5px;
+    font-weight: normal;
+    color: var(--muted);
+    margin-top: 2px;
+}
+
+input[type="number"] {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+    background: white;
+    transition: border-color .2s, box-shadow .2s;
+}
+
+input[type="number"]:focus {
+    outline: none;
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(29, 99, 139, .12);
+}
+
+input[type="number"].invalid {
+    border-color: var(--orange);
+    background: #fff8f3;
+}
+
+/* --- Buttons --- */
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-top: 18px;
+}
+
+.btn {
+    display: inline-block;
+    padding: 10px 24px;
+    background: var(--blue);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    font-family: inherit;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background .2s, transform .1s;
+}
+
+.btn:hover {
+    background: var(--teal);
+}
+
+.btn:active {
+    transform: translateY(1px);
+}
+
+.btn-secondary {
+    background: white;
+    color: var(--blue);
+    border: 1px solid var(--blue);
+}
+
+.btn-secondary:hover {
+    background: #eef6fc;
+    color: var(--teal);
+}
+
+/* --- Results --- */
+.result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin: 14px 0;
+}
+
+.result-item {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #f7fbfe;
+    padding: 12px 14px;
+}
+
+.result-item .label {
+    display: block;
+    font-size: 12.5px;
+    font-weight: bold;
+    letter-spacing: .04em;
+    color: var(--muted);
+    text-transform: uppercase;
+}
+
+.result-item .value {
+    display: block;
+    font-size: 1.32rem;
+    font-weight: bold;
+    color: #113c60;
+    line-height: 1.35;
+}
+
+.result-item .unit {
+    font-size: .8rem;
+    font-weight: normal;
+    color: var(--muted);
+}
+
+.table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
 /* --- Table --- */
 table {
     border-collapse: collapse;
     width: 100%;
-    min-width: 660px;
+    min-width: 520px;
     font-size: 14px;
 }
 
@@ -152,6 +271,7 @@ th {
 th {
     background: #e6f1fa;
     color: #123e5c;
+    width: 34%;
 }
 
 tbody tr:nth-child(even) {
@@ -169,10 +289,43 @@ tbody tr:nth-child(even) {
 
 .good {
     background: #e9f6f2;
-    border-left: 4px solid #178875;
+    border-left: 4px solid var(--green);
     padding: 12px 15px;
     margin: 12px 0;
     border-radius: 0 6px 6px 0;
+}
+
+.region {
+    display: inline-block;
+    font-weight: bold;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: #e6f1fa;
+    color: #123e5c;
+    border: 1px solid #bcd5e8;
+}
+
+.region.warn {
+    background: #fff4e9;
+    border-color: #e8b79a;
+    color: #8d3f18;
+}
+
+/* --- Assumptions --- */
+.assumptions {
+    font-size: 13.5px;
+    color: var(--muted);
+}
+
+.assumptions summary {
+    cursor: pointer;
+    font-weight: bold;
+    color: var(--blue);
+}
+
+.assumptions ul {
+    margin: 8px 0;
+    padding-left: 20px;
 }
 
 /* --- Footer --- */
@@ -188,10 +341,20 @@ footer {
     main {
         padding: 10px;
     }
+
     .card {
         padding: 17px 15px;
     }
+
     .hero {
         padding: 33px 17px;
+    }
+
+    .col-6 {
+        flex: 1 1 100%;
+    }
+
+    .result-item .value {
+        font-size: 1.15rem;
     }
 }

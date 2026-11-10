@@ -1,0 +1,29 @@
+{
+    // ใช้ debugger ของ VS Code กับ Flask ได้โดยกด F5
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Flask: debug server (port 5000)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "flask",
+            "args": ["--app", "app", "run", "--host", "127.0.0.1", "--port", "5000"],
+            "jinja": true,
+            "env": { "FLASK_DEBUG": "1" }
+        },
+        {
+            "name": "Python: current file",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Launch Chrome against localhost:5000",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://127.0.0.1:5000",
+            "webRoot": "${workspaceFolder}"
+        }
+    ]
+}
