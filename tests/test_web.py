@@ -146,5 +146,73 @@ class TestFlaskRoutes(unittest.TestCase):
         self.assertAlmostEqual(data["ic"], 1.229858e-3, places=8)
 
 
+FIXED_A2_FORM = {
+    "mode": "fixed",
+    "vcc": "12",
+    "vcc_unit": "V",
+    "vbe": "0.70",
+    "vbe_unit": "V",
+    "rb": "1",
+    "rb_unit": "MΩ",
+    "rc": "2.2",
+    "rc_unit": "kΩ",
+    "beta": "100",
+}
+
+
+class TestFixedModeRoutes(unittest.TestCase):
+    """Lab 3 · Fixed Bias: เลือกโหมด ตรวจอินพุต และผล A2"""
+
+    def setUp(self):
+        app.config["TESTING"] = True
+        self.client = app.test_client()
+
+    def test_fixed_mode_get_shows_only_relevant_fields(self):
+        """โหมด Fixed ต้องมีช่อง RB และไม่แสดงช่องของ Divider"""
+        response = self.client.get("/?mode=fixed")
+        body = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('name="rb"', body)
+        self.assertIn('name="rb_unit"', body)
+        self.assertNotIn('name="r1"', body)
+        self.assertNotIn('name="re"', body)
+        self.assertIn('aria-label="วงจร BJT NPN Common-Emitter แบบ Fixed Bias"', body)
+
+    def test_fixed_a2_post(self):
+        """A2: RB = 1 MΩ ต้องได้ IC = 1.13 mA และ VCE = 9.514 V"""
+        response = self.client.post("/", data=FIXED_A2_FORM)
+        body = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("ผลลัพธ์ DC Bias — Fixed Bias", body)
+        self.assertIn("1.13", body)
+        self.assertIn("9.514", body)
+        self.assertIn("Forward-Active", body)
+        self.assertNotIn("VTH = VCC·R2/(R1+R2)", body)
+
+    def test_fixed_a2_api(self):
+        """API ต้องเลือกฟังก์ชัน Fixed และไม่ส่งค่าของ Divider กลับมา"""
+        response = self.client.post("/api/calculate", json=FIXED_A2_FORM)
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["mode"], "fixed")
+        self.assertAlmostEqual(data["ib"], 11.30e-6, places=9)
+        self.assertAlmostEqual(data["ic"], 1.13e-3, places=8)
+        self.assertAlmostEqual(data["vce"], 9.514, places=5)
+        self.assertNotIn("vth", data)
+        self.assertNotIn("rth", data)
+
+    def test_unknown_mode_is_error(self):
+        """โหมดที่ไม่รู้จักต้องแจ้ง error ไม่เดาเป็น Divider"""
+        response = self.client.post("/", data=dict(VALID_FORM, mode="unknown"))
+        body = response.get_data(as_text=True)
+        self.assertIn("ไม่รู้จักโหมด", body)
+
+    def test_fixed_zero_rb_is_error(self):
+        """RB = 0 ต้องแจ้ง error จาก engineering validation"""
+        response = self.client.post("/", data=dict(FIXED_A2_FORM, rb="0"))
+        body = response.get_data(as_text=True)
+        self.assertIn("RB ต้องมากกว่า 0", body)
+
+
 if __name__ == "__main__":
     unittest.main()

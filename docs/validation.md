@@ -89,3 +89,26 @@ python -m unittest discover -s tests -v
 - เป็นแบบจำลอง Forward-Active อย่างง่าย ไม่ใช่ SPICE
 - β และ VBE ถือว่าคงที่
 - ไม่ได้คำนวณ Early effect, temperature effect หรือ parasitic
+
+## 5. Lab 3 · A2 — Fixed Bias (RB = 1 MΩ)
+
+**วิธีตรวจ:** OpenCode Browser (in-app browser) · http://127.0.0.1:5000/?mode=fixed  
+**อินพุตที่กรอกจริง:** โหมด Fixed Bias, VCC = 12 V, RB = 1 MΩ, RC = 2.2 kΩ, β = 100, VBE = 0.70 V  
+**หน้าฟอร์ม:** มีช่อง RB และไม่แสดงช่อง R1/R2/RE · ผลและหัวข้อระบุโหมด "Fixed Bias"
+
+| รายการ | คาดหมาย (คำนวณมือ) | เห็นจริงจากหน้าเว็บ | ผลต่าง | สถานะ |
+|---|---|---|---|---|
+| IB | 11.30 µA | 11.3 µA | 0.00 µA | PASS |
+| **IC** | **1.130000 mA** | **1.13 mA** | **0.000 mA** | **PASS** |
+| IE | 1.141300 mA | 1.14 mA | 0.001 mA | PASS |
+| VB | 0.700 V | 700 mV | 0.000 V | PASS |
+| VE | 0.000 V | 0 mV | 0.000 V | PASS |
+| VC | 9.514000 V | 9.514 V | 0.000 V | PASS |
+| **VCE** | **9.514000 V** | **9.514 V** | **0.000 V** | **PASS** |
+| โซน | Forward-Active | Forward-Active | — | PASS |
+
+เกณฑ์ที่ใช้: |ΔIC| ≤ 0.01 mA และ |ΔVCE| ≤ 0.02 V เทียบกับค่าอ้างอิงที่ยังไม่ปัดเศษ → ผ่านทั้งสองรายการ
+
+**หลักฐานจาก browser snapshot:** `ผลลัพธ์ DC Bias — Fixed Bias`, `IC 1.13 mA`, `VCE 9.514 V`, `IB 11.3 µA`, `VB 700 mV`, `VE 0 mV`, `Forward-Active` และภาพวงจร `aria-label="วงจร BJT NPN Common-Emitter แบบ Fixed Bias"` (ไม่มี RE)
+
+**การตรวจย้อนกลับ:** ค่า RB = 1 ที่เลือกหน่วย MΩ ถูกแปลงเป็น 1,000,000 Ω ที่ `app._parse_inputs()` ผ่าน `units.to_si()` ก่อนส่งเข้า `dc_bias.calculate_fixed_bias()` ซึ่งใช้สูตร `(VCC − VBE) / RB` — สมการอยู่ใน Python ไม่ได้ฝังใน HTML

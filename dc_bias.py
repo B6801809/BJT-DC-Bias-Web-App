@@ -119,6 +119,84 @@ def calculate_dc_bias(
     }
 
 
+def calculate_fixed_bias(
+    vcc: float,
+    rb: float,
+    rc: float,
+    beta: float,
+    vbe: float = 0.70,
+) -> dict:
+    """คำนวณ DC Operating Point ของ NPN Common-Emitter แบบ Fixed Bias
+
+    RB ต่อจาก VCC ไป Base และ Emitter ต่อกราวด์โดยตรง (RE = 0)
+    สมมติฐาน Forward-Active: β และ VBE คงที่ รับ/คืนหน่วย SI (V, Ω, A)
+    """
+    errors: list[str] = []
+    if vcc <= 0:
+        errors.append("VCC ต้องมากกว่า 0")
+    if rb <= 0:
+        errors.append("RB ต้องมากกว่า 0")
+    if rc < 0:
+        errors.append("RC ต้องไม่ติดลบ")
+    if beta <= 0:
+        errors.append("β ต้องมากกว่า 0")
+    if vbe <= 0:
+        errors.append("VBE ต้องมากกว่า 0")
+
+    if errors:
+        return {
+            "error": " | ".join(errors),
+            "region": "Error",
+            "warning": None,
+        }
+
+    ib = (vcc - vbe) / rb
+    if ib <= 0:
+        return {
+            "vb": vcc,
+            "ve": 0.0,
+            "vc": vcc,
+            "vce": vcc,
+            "ib": 0.0,
+            "ic": 0.0,
+            "ie": 0.0,
+            "region": "Cutoff",
+            "warning": (
+                f"IB = {ib:.6g} A ≤ 0 — ทรานซิสเตอร์อยู่ในย่าน Cutoff "
+                "แบบจำลอง Forward-Active ใช้ไม่ได้"
+            ),
+        }
+
+    ic = beta * ib
+    ie = (beta + 1) * ib
+    ve = 0.0
+    vb = ve + vbe
+    vc = vcc - ic * rc
+    vce = vc - ve
+
+    region = "Forward-Active"
+    warning = None
+    if vce <= VCE_SATURATION_LIMIT:
+        region = "Saturation"
+        warning = (
+            f"VCE = {vce:.3f} V ต่ำกว่า/เท่ากับ {VCE_SATURATION_LIMIT:.3f} V "
+            "อาจอยู่ในย่าน Saturation — ค่าที่ได้จากสมมติฐาน Forward-Active "
+            "ไม่ควรใช้เป็นผลลัพธ์ที่แม่นยำ"
+        )
+
+    return {
+        "vb": vb,
+        "ve": ve,
+        "vc": vc,
+        "vce": vce,
+        "ib": ib,
+        "ic": ic,
+        "ie": ie,
+        "region": region,
+        "warning": warning,
+    }
+
+
 if __name__ == "__main__":
     # ตัวอย่างค่าทดลองเริ่มต้น: VCC=12V, R1=100kΩ, R2=22kΩ, RC=2.2kΩ, RE=1kΩ, β=100, VBE=0.70V
     test_result = calculate_dc_bias(

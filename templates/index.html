@@ -11,8 +11,8 @@
     <header class="hero">
         <div class="wrap">
             <div class="eyebrow">ENG29 2121 · COMPUTER PROGRAMMING FOR ELECTRICAL ENGINEERS · 2/2569</div>
-            <h1>LAB 02 · BJT DC Bias Calculator</h1>
-            <p>วงจร BJT NPN Common-Emitter แบบ Voltage-Divider Bias — คำนวณ DC Operating Point จาก Python Backend</p>
+            <h1>LAB 03 · BJT DC Bias Calculator</h1>
+            <p>วงจร BJT NPN Common-Emitter — เลือก Fixed Bias หรือ Voltage-Divider Bias คำนวณ DC Operating Point จาก Python Backend</p>
             <span class="tag">Flask + Python</span>
             <span class="tag">Forward-Active Approximation</span>
         </div>
@@ -24,6 +24,21 @@
             <h2>กรอกค่าพารามิเตอร์</h2>
 
             <form method="POST" action="{{ url_for('calculate') }}" id="bias-form" novalidate>
+                <div class="row">
+                    <div class="col-6">
+                        <label for="mode">โหมดวงจร</label>
+                        <div class="field-group">
+                            <select id="mode" name="mode" aria-label="โหมดวงจร">
+                                <option value="divider" {{ 'selected' if mode == 'divider' else '' }}>Voltage Divider Bias</option>
+                                <option value="fixed" {{ 'selected' if mode == 'fixed' else '' }}>Fixed Bias (RB)</option>
+                            </select>
+                            <button type="submit" name="apply_mode" value="1" formmethod="get"
+                                    formnovalidate class="btn btn-secondary">ใช้โหมดนี้</button>
+                        </div>
+                        <span class="hint">เปลี่ยนโหมดแล้วกด "ใช้โหมดนี้" เพื่อโหลดฟอร์มที่ใช้เฉพาะวงจรนั้น</span>
+                    </div>
+                </div>
+
                 <div class="row">
                     <div class="col-6">
                         <label for="vcc">VCC</label>
@@ -53,6 +68,7 @@
                     </div>
                 </div>
 
+                {% if mode == 'divider' %}
                 <div class="row">
                     <div class="col-6">
                         <label for="r1">R1</label>
@@ -81,6 +97,23 @@
                         <span class="hint">ตัวต้านทานระหว่าง Base กับ Ground</span>
                     </div>
                 </div>
+                {% else %}
+                <div class="row">
+                    <div class="col-6">
+                        <label for="rb">RB</label>
+                        <div class="field-group">
+                            <input type="number" step="any" min="0" id="rb" name="rb"
+                                   value="{{ form.get('rb', '1') }}" placeholder="เช่น 1" required>
+                            <select name="rb_unit" aria-label="หน่วย RB">
+                                {% for unit in resistance_choices %}
+                                <option value="{{ unit }}" {{ 'selected' if selections.get('rb_unit', 'MΩ') == unit else '' }}>{{ unit }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <span class="hint">ตัวต้านทานระหว่าง VCC กับ Base — A2 ใช้ 1 MΩ (กรอก 1 แล้วเลือก MΩ)</span>
+                    </div>
+                </div>
+                {% endif %}
 
                 <div class="row">
                     <div class="col-6">
@@ -96,6 +129,7 @@
                         </div>
                         <span class="hint">ตัวต้านทานระหว่าง VCC กับ Collector</span>
                     </div>
+                    {% if mode == 'divider' %}
                     <div class="col-6">
                         <label for="re">RE</label>
                         <div class="field-group">
@@ -109,6 +143,7 @@
                         </div>
                         <span class="hint">ตัวต้านทานระหว่าง Emitter กับ Ground</span>
                     </div>
+                    {% endif %}
                 </div>
 
                 <div class="row">
@@ -171,7 +206,7 @@
                 <strong>❌ Error:</strong> {{ result.error }}
             </div>
             {% else %}
-            <h3>ผลลัพธ์ DC Bias</h3>
+            <h3>ผลลัพธ์ DC Bias — {{ mode_label }}</h3>
 
             <div class="result-grid">
                 <div class="result-item">
@@ -202,14 +237,18 @@
                     <span class="label">IE</span>
                     <span class="value">{{ display.ie.value }} <span class="unit">{{ display.ie.unit }}</span></span>
                 </div>
+                {% if display.vth %}
                 <div class="result-item">
                     <span class="label">VTH</span>
                     <span class="value">{{ display.vth.value }} <span class="unit">{{ display.vth.unit }}</span></span>
                 </div>
+                {% endif %}
+                {% if display.rth %}
                 <div class="result-item">
                     <span class="label">RTH</span>
                     <span class="value">{{ display.rth.value }} <span class="unit">{{ display.rth.unit }}</span></span>
                 </div>
+                {% endif %}
             </div>
 
             <p>
@@ -231,12 +270,20 @@
                             <tr><th>ขั้นตอน</th><th>ผลลัพธ์</th><th>ค่า SI</th></tr>
                         </thead>
                         <tbody>
+                            {% if mode == 'fixed' %}
+                            <tr><th>IB = (VCC−VBE)/RB</th><td>{{ display.ib.text }}</td><td>{{ "%.6f"|format(result.ib) }} A</td></tr>
+                            {% else %}
                             <tr><th>VTH = VCC·R2/(R1+R2)</th><td>{{ display.vth.text }}</td><td>{{ "%.6f"|format(result.vth) }} V</td></tr>
                             <tr><th>RTH = R1·R2/(R1+R2)</th><td>{{ display.rth.text }}</td><td>{{ "%.3f"|format(result.rth) }} Ω</td></tr>
                             <tr><th>IB = (VTH−VBE)/(RTH+(β+1)RE)</th><td>{{ display.ib.text }}</td><td>{{ "%.6f"|format(result.ib) }} A</td></tr>
+                            {% endif %}
                             <tr><th>IC = β·IB</th><td>{{ display.ic.text }}</td><td>{{ "%.6f"|format(result.ic) }} A</td></tr>
                             <tr><th>IE = (β+1)·IB</th><td>{{ display.ie.text }}</td><td>{{ "%.6f"|format(result.ie) }} A</td></tr>
+                            {% if mode == 'fixed' %}
+                            <tr><th>VE = 0 V (Emitter ต่อกราวด์โดยตรง)</th><td>{{ display.ve.text }}</td><td>{{ "%.6f"|format(result.ve) }} V</td></tr>
+                            {% else %}
                             <tr><th>VE = IE·RE</th><td>{{ display.ve.text }}</td><td>{{ "%.6f"|format(result.ve) }} V</td></tr>
+                            {% endif %}
                             <tr><th>VB = VE + VBE</th><td>{{ display.vb.text }}</td><td>{{ "%.6f"|format(result.vb) }} V</td></tr>
                             <tr><th>VC = VCC − IC·RC</th><td>{{ display.vc.text }}</td><td>{{ "%.6f"|format(result.vc) }} V</td></tr>
                             <tr><th>VCE = VC − VE</th><td>{{ display.vce.text }}</td><td>{{ "%.6f"|format(result.vce) }} V</td></tr>
@@ -257,8 +304,13 @@
                 <figure class="figure">
                     {{ schematic | safe }}
                     <figcaption>
+                        {% if mode == 'fixed' %}
+                        วงจร BJT NPN Common-Emitter แบบ Fixed Bias — RB ต่อ VCC–Base,
+                        RC ต่อ VCC–Collector และ Emitter ต่อกราวด์โดยตรง (ไม่มี RE)
+                        {% else %}
                         วงจร BJT NPN Common-Emitter แบบ Voltage-Divider Bias — R1 ต่อ VCC–Base,
                         R2 ต่อ Base–Ground, RC ต่อ VCC–Collector, RE ต่อ Emitter–Ground
+                        {% endif %}
                         {% if result and not result.error %}
                         (ค่าที่แสดงคือค่าจากฟอร์มที่กรอกล่าสุด)
                         {% else %}
@@ -293,7 +345,7 @@
     </main>
 
     <footer>
-        <p>สร้างด้วย Flask + Python · ENG29 2121 · Lab 02 · ผลลัพธ์คำนวณจาก Python Backend เท่านั้น</p>
+        <p>สร้างด้วย Flask + Python · ENG29 2121 · Lab 03 · ผลลัพธ์คำนวณจาก Python Backend เท่านั้น</p>
     </footer>
 
     <script src="{{ url_for('static', filename='app.js') }}"></script>

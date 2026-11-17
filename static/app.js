@@ -6,6 +6,7 @@
     var EXAMPLE = {
         vcc: "12",
         vbe: "0.70",
+        rb: "1",
         r1: "100",
         r2: "22",
         rc: "2.2",
@@ -16,6 +17,7 @@
     var EXAMPLE_UNITS = {
         vcc_unit: "V",
         vbe_unit: "V",
+        rb_unit: "MΩ",
         r1_unit: "kΩ",
         r2_unit: "kΩ",
         rc_unit: "kΩ",
@@ -49,6 +51,10 @@
     }
 
     form.addEventListener("submit", function (event) {
+        // ปุ่มเปลี่ยนโหมดเป็น GET เพื่อโหลดฟอร์มใหม่ ไม่ต้องตรวจค่าที่ยังกรอกไม่ครบ
+        if (event.submitter && event.submitter.name === "apply_mode") {
+            return;
+        }
         var missing = [];
 
         Array.prototype.forEach.call(form.elements, function (field) {
