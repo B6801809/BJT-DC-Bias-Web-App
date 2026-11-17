@@ -1,7 +1,8 @@
 # BJT DC Bias Web App
 
 เว็บแอปพลิเคชัน Flask สำหรับคำนวณ **DC Operating Point** ของวงจร BJT NPN
-Common-Emitter แบบ **Voltage-Divider Bias** (ENG29 2121 · Lab 02)
+Common-Emitter ได้ 3 แบบ: **Fixed Bias**, **Emitter Bias (แหล่งจ่ายเดียว)** และ
+**Voltage-Divider Bias** (ENG29 2121 · Lab 03 — ต่อยอดจาก Lab 2)
 
 ## ภาพรวม
 
@@ -43,14 +44,19 @@ python -m flask --app app run --debug
 
 ## วิธีใช้
 
-1. กรอกค่า VCC (V), VBE (V) และค่าความต้านทาน R1, R2, RC, RE เป็น **kΩ**
-2. กรอก β
+1. เลือก **โหมดวงจร** แล้วกด **ใช้โหมดนี้** เพื่อโหลดฟอร์มที่ใช้เฉพาะโหมดนั้น
+2. กรอกค่า VCC (V), VBE (V), RC (kΩ) และ β ทุกโหมด
+   - **Fixed Bias** — เพิ่ม RB (ค่าเริ่มต้นเป็น MΩ)
+   - **Emitter Bias** — เพิ่ม RB (MΩ) และ RE (kΩ)
+   - **Voltage Divider Bias** — เพิ่ม R1, R2, RE (kΩ)
 3. กด **Calculate DC Bias**
-4. ระบบจะแสดง VB, VE, VC, VCE (V), IB (μA), IC/IE (mA), VTH, RTH และโซนการทำงาน
+4. ระบบจะแสดง VB, VE, VC, VCE (V), IB (μA), IC/IE (mA) และโซนการทำงาน
+   (VTH/RTH เฉพาะโหมด Voltage Divider)
 5. หากอินพุตผิดหรืออยู่นอกย่าน Forward-Active จะมี Error/Warning แจ้ง
-6. ด้านล่างจะแสดง **ภาพวงจร** ที่ใช้คำนวณ, **กราฟ DC load line** พร้อมจุด Q และ **แผนภาพระดับแรงดัน** ของแต่ละโหนด
+6. ด้านล่างจะแสดง **ภาพวงจรตามโหมดที่เลือก**, **กราฟ DC load line** พร้อมจุด Q และ **แผนภาพระดับแรงดัน** ของแต่ละโหนด
 
-> ปุ่ม **ใส่ค่าตัวอย่าง** จะกรอกค่าชุดมาตรฐานให้อัตโนมัติ เพื่อทดสอบได้เร็ว
+> ปุ่ม **ใส่ค่าตัวอย่าง** จะกรอกค่าชุดมาตรฐานของโหมดนั้นให้อัตโนมัติ
+> (A2: RB = 1 MΩ · A3: RB = 1 MΩ, RE = 1 kΩ) เพื่อทดสอบได้เร็ว
 > ปุ่ม **ล้างฟอร์ม** จะเคลียร์ค่าทั้งหมด
 > กด **ดูรายละเอียดผลการคำนวณ** เพื่อดูค่ากลางของสมการทุกขั้นตอน
 
@@ -107,6 +113,22 @@ python -m flask --app app run --debug
 | VC | 9.294 V |
 | VCE | 8.052 V |
 
+#### A2 · Fixed Bias (RB = 1 MΩ)
+
+ใช้อินพุตร่วม VCC = 12 V, RC = 2.2 kΩ, β = 100, VBE = 0.70 V (ไม่กรอก R1/R2/RE)
+
+| IB | IC | VE | VB | VC | VCE | โซน |
+|---|---|---|---|---|---|---|
+| 11.30 μA | 1.13 mA | 0 V | 0.700 V | 9.514 V | 9.514 V | Forward-Active |
+
+#### A3 · Emitter Bias (RB = 1 MΩ, RE = 1 kΩ)
+
+ใช้อินพุตร่วมตามข้างบน (ไม่กรอก R1/R2)
+
+| IB | IC | IE | VE | VB | VC | VCE | โซน |
+|---|---|---|---|---|---|---|---|
+| 10.263397 μA | 1.026340 mA | 1.036603 mA | 1.036603 V | 1.736603 V | 9.742053 V | 8.705450 V | Forward-Active |
+
 ## ภาพหน้าจอ
 
 ### ผลลัพธ์ DC Bias (ค่าตัวอย่าง)
@@ -134,19 +156,36 @@ python -m flask --app app run --debug
 
 ## สมการที่ใช้
 
+**Fixed Bias** (RB ต่อ VCC–Base, Emitter ต่อกราวด์โดยตรง — ไม่มี RE)
+```
+IB  = (VCC − VBE) / RB
+VE  = 0 V
+```
+
+**Emitter Bias** (RB ต่อ VCC–Base, RE ต่อ Emitter–Ground)
+```
+IB  = (VCC − VBE) / [RB + (β+1)·RE]
+VE  = IE·RE
+```
+
+**Voltage Divider Bias** (ต่อยอดจาก Lab 2)
 ```
 VTH = VCC · R2 / (R1 + R2)
 RTH = R1·R2 / (R1 + R2)
 IB  = (VTH − VBE) / (RTH + (β+1)·RE)
+VE  = IE·RE
+```
+
+**สมการร่วมทุกโหมด**
+```
 IC  = β·IB
 IE  = (β+1)·IB
-VE  = IE·RE
 VB  = VE + VBE
 VC  = VCC − IC·RC
 VCE = VC − VE
 ```
 
-สมมติฐาน: โหมด Forward-Active, β คงที่, VBE คงที่
+สมมติฐาน: โหมด Forward-Active, β คงที่, VBE คงที่ (หน่วยภายในเป็น SI: V, Ω, A)
 
 ## การทดสอบ
 

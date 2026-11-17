@@ -4,8 +4,14 @@ from __future__ import annotations
 
 from flask import Flask, jsonify, render_template, request
 
-from circuit import fixed_schematic_svg, load_line_svg, schematic_svg, voltage_levels_svg
-from dc_bias import calculate_dc_bias, calculate_fixed_bias
+from circuit import (
+    emitter_schematic_svg,
+    fixed_schematic_svg,
+    load_line_svg,
+    schematic_svg,
+    voltage_levels_svg,
+)
+from dc_bias import calculate_dc_bias, calculate_emitter_bias, calculate_fixed_bias
 from units import (
     AUTO,
     CURRENT_DISPLAY_CHOICES,
@@ -19,14 +25,16 @@ from units import (
 app = Flask(__name__)
 
 # โหมดที่รองรับ — ถ้าไม่ส่ง mode มาจะใช้ divider เพื่อคงผล Lab 2 เดิม
-MODES = ("divider", "fixed")
+MODES = ("divider", "fixed", "emitter")
 MODE_LABELS = {
     "divider": "Voltage Divider Bias",
     "fixed": "Fixed Bias",
+    "emitter": "Emitter Bias",
 }
 MODE_FIELDS = {
     "divider": ("vcc", "r1", "r2", "rc", "re", "beta"),
     "fixed": ("vcc", "rb", "rc", "beta"),
+    "emitter": ("vcc", "rb", "rc", "re", "beta"),
 }
 
 
@@ -117,6 +125,15 @@ def _example_params(mode: str) -> dict:
     """ค่าตัวอย่างสำหรับแสดงภาพวงจรของโหมดที่เลือก"""
     fields = MODE_FIELDS[mode] + ("vbe",)
     return {field: EXAMPLE[field] for field in fields}
+
+
+def _calculate(mode: str, params: dict) -> dict:
+    """เลือกฟังก์ชันคำนวณตามโหมดที่ส่งมาจากฟอร์ม"""
+    if mode == "fixed":
+        return calculate_fixed_bias(**params)
+    if mode == "emitter":
+        return calculate_emitter_bias(**params)
+    return calculate_dc_bias(**params)
 
 
 def _parse_inputs(data) -> tuple[dict, dict, str]:
@@ -244,20 +261,22 @@ def _build_figures(
     levels = None
     measured = result if result and "error" not in result else None
 
+    shown = (
+        {
+            "vb": measured["vb"],
+            "ve": measured["ve"],
+            "vc": measured["vc"],
+            "ic": measured["ic"],
+        }
+        if measured
+        else {}
+    )
     if mode == "fixed":
-        schematic = fixed_schematic_svg(
-            **params,
-            **({"vb": measured["vb"], "ve": measured["ve"], "vc": measured["vc"],
-                "ic": measured["ic"]} if measured else {}),
-            display_units=display_units,
-        )
+        schematic = fixed_schematic_svg(**params, **shown, display_units=display_units)
+    elif mode == "emitter":
+        schematic = emitter_schematic_svg(**params, **shown, display_units=display_units)
     else:
-        schematic = schematic_svg(
-            **params,
-            **({"vb": measured["vb"], "ve": measured["ve"], "vc": measured["vc"],
-                "ic": measured["ic"]} if measured else {}),
-            display_units=display_units,
-        )
+        schematic = schematic_svg(**params, **shown, display_units=display_units)
 
     if measured:
         loadline = load_line_svg(
@@ -320,8 +339,7 @@ def calculate():
             **figures,
         )
 
-    calculator = calculate_fixed_bias if mode == "fixed" else calculate_dc_bias
-    result = calculator(**params)
+    result = _calculate(mode, params)
     display = _build_display(result, selections)
     figures = _build_figures(params, result, selections, mode)
     return render_template(
@@ -352,8 +370,7 @@ def api_calculate():
     except ValueError as exc:
         return jsonify({"error": str(exc), "region": "Error"}), 400
 
-    calculator = calculate_fixed_bias if mode == "fixed" else calculate_dc_bias
-    result = calculator(**params)
+    result = _calculate(mode, params)
     payload_out = dict(result)
     payload_out["mode"] = mode
     payload_out["units"] = selections

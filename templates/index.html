@@ -31,6 +31,7 @@
                             <select id="mode" name="mode" aria-label="โหมดวงจร">
                                 <option value="divider" {{ 'selected' if mode == 'divider' else '' }}>Voltage Divider Bias</option>
                                 <option value="fixed" {{ 'selected' if mode == 'fixed' else '' }}>Fixed Bias (RB)</option>
+                                <option value="emitter" {{ 'selected' if mode == 'emitter' else '' }}>Emitter Bias (RB + RE)</option>
                             </select>
                             <button type="submit" name="apply_mode" value="1" formmethod="get"
                                     formnovalidate class="btn btn-secondary">ใช้โหมดนี้</button>
@@ -110,7 +111,7 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <span class="hint">ตัวต้านทานระหว่าง VCC กับ Base — A2 ใช้ 1 MΩ (กรอก 1 แล้วเลือก MΩ)</span>
+                        <span class="hint">ตัวต้านทานระหว่าง VCC กับ Base — A2/A3 ใช้ 1 MΩ (กรอก 1 แล้วเลือก MΩ)</span>
                     </div>
                 </div>
                 {% endif %}
@@ -129,7 +130,7 @@
                         </div>
                         <span class="hint">ตัวต้านทานระหว่าง VCC กับ Collector</span>
                     </div>
-                    {% if mode == 'divider' %}
+                    {% if mode != 'fixed' %}
                     <div class="col-6">
                         <label for="re">RE</label>
                         <div class="field-group">
@@ -272,6 +273,8 @@
                         <tbody>
                             {% if mode == 'fixed' %}
                             <tr><th>IB = (VCC−VBE)/RB</th><td>{{ display.ib.text }}</td><td>{{ "%.6f"|format(result.ib) }} A</td></tr>
+                            {% elif mode == 'emitter' %}
+                            <tr><th>IB = (VCC−VBE)/[RB+(β+1)RE]</th><td>{{ display.ib.text }}</td><td>{{ "%.6f"|format(result.ib) }} A</td></tr>
                             {% else %}
                             <tr><th>VTH = VCC·R2/(R1+R2)</th><td>{{ display.vth.text }}</td><td>{{ "%.6f"|format(result.vth) }} V</td></tr>
                             <tr><th>RTH = R1·R2/(R1+R2)</th><td>{{ display.rth.text }}</td><td>{{ "%.3f"|format(result.rth) }} Ω</td></tr>
@@ -307,6 +310,9 @@
                         {% if mode == 'fixed' %}
                         วงจร BJT NPN Common-Emitter แบบ Fixed Bias — RB ต่อ VCC–Base,
                         RC ต่อ VCC–Collector และ Emitter ต่อกราวด์โดยตรง (ไม่มี RE)
+                        {% elif mode == 'emitter' %}
+                        วงจร BJT NPN Common-Emitter แบบ Emitter Bias — RB ต่อ VCC–Base,
+                        RC ต่อ VCC–Collector และ RE ต่อ Emitter–Ground
                         {% else %}
                         วงจร BJT NPN Common-Emitter แบบ Voltage-Divider Bias — R1 ต่อ VCC–Base,
                         R2 ต่อ Base–Ground, RC ต่อ VCC–Collector, RE ต่อ Emitter–Ground

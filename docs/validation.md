@@ -112,3 +112,28 @@ python -m unittest discover -s tests -v
 **หลักฐานจาก browser snapshot:** `ผลลัพธ์ DC Bias — Fixed Bias`, `IC 1.13 mA`, `VCE 9.514 V`, `IB 11.3 µA`, `VB 700 mV`, `VE 0 mV`, `Forward-Active` และภาพวงจร `aria-label="วงจร BJT NPN Common-Emitter แบบ Fixed Bias"` (ไม่มี RE)
 
 **การตรวจย้อนกลับ:** ค่า RB = 1 ที่เลือกหน่วย MΩ ถูกแปลงเป็น 1,000,000 Ω ที่ `app._parse_inputs()` ผ่าน `units.to_si()` ก่อนส่งเข้า `dc_bias.calculate_fixed_bias()` ซึ่งใช้สูตร `(VCC − VBE) / RB` — สมการอยู่ใน Python ไม่ได้ฝังใน HTML
+
+## 6. Lab 3 · A3 — Emitter Bias (RB = 1 MΩ, RE = 1 kΩ)
+
+**วิธีตรวจ:** OpenCode Browser (in-app browser) · http://127.0.0.1:5000/?mode=emitter  
+**อินพุตที่กรอกจริง:** โหมด Emitter Bias, VCC = 12 V, RB = 1 MΩ, RC = 2.2 kΩ, RE = 1 kΩ, β = 100, VBE = 0.70 V  
+**หน้าฟอร์ม:** แสดงทั้งช่อง RB และ RE ไม่แสดงช่อง R1/R2 · ผลและหัวข้อระบุโหมด "Emitter Bias"
+
+สมการอ้างอิง: `IB = (VCC − VBE) / [RB + (β+1)RE] = 11.3 / (1,000,000 + 101 × 1,000) = 11.3 / 1,101,000 = 10.263397 µA`
+
+| รายการ | คาดหมาย (คำนวณมือ) | เห็นจริงจากหน้าเว็บ | ผลต่าง | สถานะ |
+|---|---|---|---|---|
+| IB | 10.263397 µA | 10.26 µA | 0.003397 µA | PASS |
+| **IC** | **1.026340 mA** | **1.03 mA** | **0.003660 mA** | **PASS** |
+| IE | 1.036603 mA | 1.04 mA | 0.003397 mA | PASS |
+| VB | 1.736603 V | 1.737 V | 0.000397 V | PASS |
+| VE | 1.036603 V | 1.037 V | 0.000397 V | PASS |
+| VC | 9.742053 V | 9.742 V | 0.000053 V | PASS |
+| **VCE** | **8.705450 V** | **8.705 V** | **0.000450 V** | **PASS** |
+| โซน | Forward-Active | Forward-Active | — | PASS |
+
+เกณฑ์ที่ใช้: |ΔIC| ≤ 0.01 mA และ |ΔVCE| ≤ 0.02 V เทียบกับค่าอ้างอิงที่ยังไม่ปัดเศษ → ผ่านทั้งสองรายการ
+
+**หลักฐานจาก browser snapshot:** `ผลลัพธ์ DC Bias — Emitter Bias`, `IC 1.03 mA`, `VCE 8.705 V`, `IB 10.26 µA`, `VE 1.037 V`, `Forward-Active` และภาพวงจร `aria-label="วงจร BJT NPN Common-Emitter แบบ Emitter Bias"` (มี RB และ RE)
+
+**การตรวจย้อนกลับ:** ค่า RE = 1 kΩ ถูกแปลงเป็น 1,000 Ω ที่ `app._parse_inputs()` แล้วส่งเข้า `dc_bias.calculate_emitter_bias()` ซึ่งใช้สมการ `(VCC − VBE)/[RB + (β+1)RE]` และ `VE = IE·RE` — ผล VE = 1.037 V บนหน้าเว็บยืนยันว่าค่า RE เข้าถึงสมการจริง (ใน Fixed Bias VE จะเป็น 0 V เสมอ)

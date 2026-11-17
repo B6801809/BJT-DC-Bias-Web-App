@@ -9,7 +9,11 @@ import unittest
 # ทำให้ import dc_bias ได้เมื่อรัน unittest จากโฟลเดอร์ tests
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from dc_bias import calculate_dc_bias, calculate_fixed_bias  # noqa: E402
+from dc_bias import (  # noqa: E402
+    calculate_dc_bias,
+    calculate_emitter_bias,
+    calculate_fixed_bias,
+)
 
 
 class TestDCBiasCalculations(unittest.TestCase):
@@ -130,6 +134,57 @@ class TestFixedBiasCalculations(unittest.TestCase):
     def test_saturation_warning(self):
         """VCE ต่ำเกินไปต้องเตือนว่าแบบจำลอง Forward-Active ใช้ไม่ได้"""
         result = calculate_fixed_bias(**dict(self.params, rb=10_000.0))
+        self.assertEqual(result["region"], "Saturation")
+        self.assertIsNotNone(result["warning"])
+
+
+class TestEmitterBiasCalculations(unittest.TestCase):
+    """ทดสอบตรรกะวิศวกรรมของ Emitter Bias (Lab 3 · A3)"""
+
+    def setUp(self):
+        # VCC=12V, RB=1MΩ, RC=2.2kΩ, RE=1kΩ, β=100, VBE=0.70V
+        self.params = dict(
+            vcc=12.0, rb=1_000_000.0, rc=2_200.0, re=1_000.0, beta=100.0, vbe=0.70
+        )
+
+    def test_a3_reference_solution(self):
+        """A3: ค่าอ้างอิงอิสระต้องตรงกับสมการมือคำนวณ"""
+        result = calculate_emitter_bias(**self.params)
+
+        self.assertNotIn("error", result)
+        self.assertEqual(result["region"], "Forward-Active")
+        self.assertIsNone(result["warning"])
+        self.assertAlmostEqual(result["ib"], 10.263397e-6, places=9)
+        self.assertAlmostEqual(result["ic"], 1.026340e-3, places=8)
+        self.assertAlmostEqual(result["ie"], 1.036603e-3, places=8)
+        self.assertAlmostEqual(result["ve"], 1.036603, places=5)
+        self.assertAlmostEqual(result["vb"], 1.736603, places=5)
+        self.assertAlmostEqual(result["vc"], 9.742053, places=5)
+        self.assertAlmostEqual(result["vce"], 8.705450, places=5)
+
+    def test_re_increases_base_resistance_seen_by_base(self):
+        """A4: เพิ่ม RE ต้องลด IB และ IC (แต่ตรวจเฉพาะสมการในโหมดนี้)"""
+        bigger = calculate_emitter_bias(**dict(self.params, re=2_000.0))
+        base = calculate_emitter_bias(**self.params)
+        self.assertLess(bigger["ib"], base["ib"])
+        self.assertLess(bigger["ic"], base["ic"])
+
+    def test_current_relations(self):
+        """IC = β·IB และ IE = (β+1)·IB"""
+        result = calculate_emitter_bias(**self.params)
+        self.assertAlmostEqual(result["ic"], 100.0 * result["ib"], places=12)
+        self.assertAlmostEqual(result["ie"], 101.0 * result["ib"], places=12)
+        self.assertAlmostEqual(result["ve"], result["ie"] * 1_000.0, places=9)
+
+    def test_zero_re_is_error(self):
+        """RE = 0 ในโหมด Emitter ต้องแจ้ง error"""
+        result = calculate_emitter_bias(**dict(self.params, re=0.0))
+        self.assertIn("error", result)
+        self.assertIn("RE ต้องมากกว่า 0", result["error"])
+
+    def test_saturation_warning(self):
+        """VCE ต่ำเกินไปต้องเตือนว่าแบบจำลอง Forward-Active ใช้ไม่ได้"""
+        result = calculate_emitter_bias(**dict(self.params, rb=10_000.0))
         self.assertEqual(result["region"], "Saturation")
         self.assertIsNotNone(result["warning"])
 

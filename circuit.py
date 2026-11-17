@@ -350,6 +350,128 @@ def fixed_schematic_svg(
     )
 
 
+def emitter_schematic_svg(
+    *,
+    vcc: float,
+    rb: float,
+    rc: float,
+    re: float,
+    beta: float,
+    vbe: float,
+    vb: float | None = None,
+    ve: float | None = None,
+    vc: float | None = None,
+    ic: float | None = None,
+    display_units: dict | None = None,
+) -> str:
+    """วาดภาพวงจร BJT NPN Common-Emitter แบบ Emitter Bias (แหล่งจ่ายเดียว)
+
+    RB ต่อจาก VCC ไป Base และ RE ต่อจาก Emitter ลงกราวด์
+    ค่าที่รับเข้ามาเป็นหน่วย SI (V, Ω, A)
+    """
+    p = PALETTE
+    uid = "sch-emitter"
+    units = _resolve_units(display_units)
+    parts: list[str] = []
+
+    vcc_y, base_y, gnd_y = 40, 165, 330
+    x_rb, x_rc, x_q, x_re = 150, 430, 300, 300
+
+    parts.append(
+        f'<defs><marker id="{uid}-arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" '
+        f'orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="{p["label"]}"/></marker></defs>'
+    )
+    parts.append('<rect width="560" height="400" rx="10" fill="#ffffff" stroke="#d3e0ec"/>')
+
+    # --- แรงดันจ่าย VCC ---
+    parts.append(
+        f'<g class="supply">'
+        f'<line x1="110" y1="{vcc_y}" x2="470" y2="{vcc_y}" stroke="{p["wire"]}" stroke-width="2.4"/>'
+        f'<circle cx="110" cy="{vcc_y}" r="4" fill="{p["wire"]}"/>'
+        f'<text x="150" y="{vcc_y - 14}" text-anchor="middle" font-size="14" font-weight="bold" '
+        f'fill="{p["label"]}">VCC = {format_value(vcc, "voltage", units["voltage"])}</text>'
+        f"</g>"
+    )
+
+    # --- RB (VCC → Base) ---
+    parts.append(f'<line x1="{x_rb}" y1="{vcc_y}" x2="{x_rb}" y2="70" stroke="{p["wire"]}" stroke-width="2.4"/>')
+    parts.append(_resistor(x_rb - 11, 70, 22, 50, f"RB = {format_value(rb, 'resistance', units['resistance'])}", uid))
+    parts.append(f'<line x1="{x_rb}" y1="120" x2="{x_rb}" y2="{base_y}" stroke="{p["wire"]}" stroke-width="2.4"/>')
+
+    # --- RC (VCC → Collector) ---
+    parts.append(f'<line x1="{x_rc}" y1="{vcc_y}" x2="{x_rc}" y2="70" stroke="{p["wire"]}" stroke-width="2.4"/>')
+    parts.append(_resistor(x_rc - 11, 70, 22, 50, f"RC = {format_value(rc, 'resistance', units['resistance'])}", uid))
+    parts.append(f'<line x1="{x_rc}" y1="120" x2="{x_rc}" y2="135" stroke="{p["wire"]}" stroke-width="2.4"/>')
+
+    # --- ทรานซิสเตอร์ NPN ---
+    parts.append(
+        f'<g class="device">'
+        f'<circle cx="{x_q}" cy="185" r="44" fill="#ffffff" stroke="{p["device"]}" stroke-width="2"/>'
+        f'<line x1="280" y1="150" x2="280" y2="210" stroke="{p["device"]}" stroke-width="3"/>'
+        f'<line x1="280" y1="162" x2="322" y2="135" stroke="{p["device"]}" stroke-width="2.4"/>'
+        f'<line x1="280" y1="198" x2="322" y2="225" stroke="{p["device"]}" stroke-width="2.4" '
+        f'marker-end="url(#{uid}-arrow)"/>'
+        f'<text x="{x_q}" y="118" text-anchor="middle" font-size="14" font-weight="bold" '
+        f'fill="{p["device"]}">Q1 (NPN)</text>'
+        f"</g>"
+    )
+
+    # --- เส้นต่อ Base และ Collector ---
+    parts.append(f'<line x1="{x_rb}" y1="{base_y}" x2="280" y2="{base_y}" stroke="{p["wire"]}" stroke-width="2.4"/>')
+    parts.append(f'<circle cx="{x_rb}" cy="{base_y}" r="4" fill="{p["wire"]}"/>')
+    parts.append(f'<line x1="322" y1="135" x2="{x_rc}" y2="135" stroke="{p["wire"]}" stroke-width="2.4"/>')
+
+    # --- RE (Emitter → GND) ---
+    parts.append(f'<line x1="{x_re}" y1="225" x2="{x_re}" y2="265" stroke="{p["wire"]}" stroke-width="2.4"/>')
+    parts.append(_resistor(x_re - 11, 265, 22, 50, f"RE = {format_value(re, 'resistance', units['resistance'])}", uid))
+    parts.append(f'<line x1="{x_re}" y1="315" x2="{x_re}" y2="{gnd_y}" stroke="{p["wire"]}" stroke-width="2.4"/>')
+    parts.append(_ground(x_re, gnd_y, uid))
+
+    # --- ลูกศรกระแส IC / IE ---
+    parts.append(
+        f'<g class="current">'
+        f'<line x1="365" y1="135" x2="352" y2="135" stroke="{p["label"]}" stroke-width="1.8" '
+        f'marker-end="url(#{uid}-arrow)"/>'
+        f'<line x1="{x_re}" y1="243" x2="{x_re}" y2="256" stroke="{p["label"]}" stroke-width="1.8" '
+        f'marker-end="url(#{uid}-arrow)"/>'
+        f"</g>"
+    )
+
+    # --- ค่าของโหนด ---
+    if vb is not None:
+        parts.append(
+            f'<text x="168" y="{base_y - 8}" font-size="12.5" font-weight="bold" fill="{p["muted"]}">'
+            f"VB = {format_value(vb, 'voltage', units['voltage'])}</text>"
+        )
+    if vc is not None:
+        parts.append(
+            f'<text x="449" y="128" font-size="12.5" font-weight="bold" fill="{p["muted"]}">'
+            f"VC = {format_value(vc, 'voltage', units['voltage'])}</text>"
+        )
+    if ve is not None:
+        parts.append(
+            f'<text x="342" y="258" font-size="12.5" font-weight="bold" fill="{p["muted"]}">'
+            f"VE = {format_value(ve, 'voltage', units['voltage'])}</text>"
+        )
+    if ic is not None:
+        parts.append(
+            f'<text x="438" y="152" text-anchor="end" font-size="12.5" font-weight="bold" '
+            f'fill="{p["muted"]}">IC = {format_value(ic, 'current', units['current'])}</text>'
+        )
+
+    parts.append(
+        f'<text x="150" y="374" font-size="12.5" fill="{p["muted"]}">'
+        f"β = {_num(beta, 0)} · VBE = {format_value(vbe, 'voltage', units['voltage'])} "
+        f"· โหมด Emitter Bias (Forward-Active)</text>"
+    )
+
+    return (
+        f'<svg viewBox="0 0 560 400" xmlns="http://www.w3.org/2000/svg" role="img" '
+        f'aria-label="วงจร BJT NPN Common-Emitter แบบ Emitter Bias" '
+        f'class="figure-svg">{"".join(parts)}</svg>'
+    )
+
+
 # ---------------------------------------------------------------------------
 # 2) กราฟ DC load line และจุด Q
 # ---------------------------------------------------------------------------

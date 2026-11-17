@@ -214,5 +214,55 @@ class TestFixedModeRoutes(unittest.TestCase):
         self.assertIn("RB ต้องมากกว่า 0", body)
 
 
+EMITTER_A3_FORM = dict(FIXED_A2_FORM, mode="emitter", re="1", re_unit="kΩ")
+
+
+class TestEmitterModeRoutes(unittest.TestCase):
+    """Lab 3 · Emitter Bias: เลือกโหมด ตรวจอินพุต และผล A3"""
+
+    def setUp(self):
+        app.config["TESTING"] = True
+        self.client = app.test_client()
+
+    def test_emitter_mode_get_shows_rb_and_re(self):
+        """โหมด Emitter ต้องมีทั้งช่อง RB และ RE ไม่มีช่อง R1/R2"""
+        response = self.client.get("/?mode=emitter")
+        body = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('name="rb"', body)
+        self.assertIn('name="re"', body)
+        self.assertNotIn('name="r1"', body)
+        self.assertIn('aria-label="วงจร BJT NPN Common-Emitter แบบ Emitter Bias"', body)
+
+    def test_emitter_a3_post(self):
+        """A3: RB = 1 MΩ, RE = 1 kΩ ต้องได้ IC ≈ 1.026 mA และ VCE ≈ 8.705 V"""
+        response = self.client.post("/", data=EMITTER_A3_FORM)
+        body = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("ผลลัพธ์ DC Bias — Emitter Bias", body)
+        self.assertIn("8.705", body)
+        self.assertIn("10.26", body)
+        self.assertIn("Forward-Active", body)
+        self.assertNotIn("VTH = VCC·R2/(R1+R2)", body)
+
+    def test_emitter_a3_api(self):
+        """API ต้องเลือกฟังก์ชัน Emitter และคำนวณผลของ RE ด้วย"""
+        response = self.client.post("/api/calculate", json=EMITTER_A3_FORM)
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["mode"], "emitter")
+        self.assertAlmostEqual(data["ib"], 10.263397e-6, places=9)
+        self.assertAlmostEqual(data["ic"], 1.026340e-3, places=8)
+        self.assertAlmostEqual(data["ve"], 1.036603, places=5)
+        self.assertAlmostEqual(data["vce"], 8.705450, places=5)
+        self.assertNotIn("vth", data)
+
+    def test_emitter_zero_re_is_error(self):
+        """RE = 0 ในโหมด Emitter ต้องแจ้ง error จาก engineering validation"""
+        response = self.client.post("/", data=dict(EMITTER_A3_FORM, re="0"))
+        body = response.get_data(as_text=True)
+        self.assertIn("RE ต้องมากกว่า 0", body)
+
+
 if __name__ == "__main__":
     unittest.main()
