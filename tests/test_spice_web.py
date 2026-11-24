@@ -105,6 +105,16 @@ class TestSpiceDefaults(SpiceApiCase):
 
 
 class TestSpicePageHtml(SpiceApiCase):
+    def test_page_identity_is_lab04(self):
+        # POST เพื่อให้ section ผลลัพธ์ (02) ถูก render ด้วยข้อมูลจริง
+        body = self.client.post("/", data=CIRCUIT).get_data(as_text=True)
+        self.assertIn("LAB 04 · BJT CE Amplifier", body)
+        self.assertIn("02 / ANALYTICAL DC", body)
+        self.assertIn("ผลลัพธ์ DC จาก Analytical", body)
+        self.assertIn("03 / DC VISUALIZATION", body)
+        self.assertIn("04 / SPICE SIMULATION", body)
+        self.assertNotIn("LAB 03", body)
+
     def test_divider_page_contains_spice_section(self):
         body = self.client.get("/").get_data(as_text=True)
         self.assertIn('id="spice-panel"', body)
