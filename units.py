@@ -25,10 +25,17 @@ CURRENT_UNITS: dict[str, float] = {
     "µA": 1e-6,
 }
 
+FREQUENCY_UNITS: dict[str, float] = {
+    "Hz": 1.0,
+    "kHz": 1e3,
+    "MHz": 1e6,
+}
+
 # ตัวเลือกหน่วยที่ให้ผู้ใช้เลือกได้ในหน้าเว็บ
 RESISTANCE_CHOICES = ("Ω", "kΩ", "MΩ")
 VOLTAGE_CHOICES = ("V", "mV")
 CURRENT_DISPLAY_CHOICES = ("auto", "A", "mA", "µA")
+FREQUENCY_CHOICES = ("Hz", "kHz", "MHz")
 VOLTAGE_DISPLAY_CHOICES = ("auto", "V", "mV")
 
 AUTO = "auto"
@@ -37,6 +44,7 @@ _UNIT_TABLES = {
     "voltage": VOLTAGE_UNITS,
     "current": CURRENT_UNITS,
     "resistance": RESISTANCE_UNITS,
+    "frequency": FREQUENCY_UNITS,
 }
 
 # ลำดับหน่วยจากใหญ่ไปเล็ก สำหรับเลือกหน่วยอัตโนมัติ
@@ -44,6 +52,7 @@ _AUTO_ORDER = {
     "voltage": ("V", "mV"),
     "current": ("A", "mA", "µA"),
     "resistance": ("MΩ", "kΩ", "Ω"),
+    "frequency": ("MHz", "kHz", "Hz"),
 }
 
 # จำนวนทศนิยมที่ต้องการเมื่อแสดงผลแบบอัตโนมัติ
@@ -51,6 +60,7 @@ _AUTO_DECIMALS = {
     "voltage": 3,
     "current": 2,
     "resistance": 3,
+    "frequency": 3,
 }
 
 

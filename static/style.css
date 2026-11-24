@@ -414,6 +414,91 @@ footer {
     font-size: 12px;
 }
 
+/* --- Lab 04: SPICE panel --- */
+.spice-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 12px 0 18px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: #f7fbfe;
+    color: var(--muted);
+    font-size: 12.5px;
+    font-weight: bold;
+}
+
+.badge.ok {
+    background: #e9f6f2;
+    border-color: #a9d8cc;
+    color: #0a5a54;
+}
+
+.badge.bad {
+    background: #fff4e9;
+    border-color: #e8b79a;
+    color: #8d3f18;
+}
+
+.spice-status-idle {
+    background: #f7fbfe;
+    border-left-color: var(--blue);
+}
+
+.spice-status-running {
+    background: #f1f7fc;
+    border-left-color: var(--blue);
+}
+
+.spice-status-ok {
+    background: #e9f6f2;
+    border-left-color: var(--green);
+}
+
+.spice-error.spice-error,
+.note.spice-error {
+    background: #fff4e9;
+    border-left-color: var(--orange);
+}
+
+.spice-error pre,
+.spice-log {
+    margin: 10px 0 0;
+    padding: 12px;
+    background: #0f2438;
+    color: #e7f2f9;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.55;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 340px;
+}
+
+.spice-run-meta {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin: 0 0 12px;
+}
+
+.spice-summary .result-item .value {
+    font-size: 1.1rem;
+}
+
+#spice-output .figure {
+    margin-top: 16px;
+}
+
+#spice-output h3 {
+    margin-top: 22px;
+}
+
 /* --- Responsive --- */
 @media (max-width: 640px) {
     main {

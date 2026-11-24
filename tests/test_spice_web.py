@@ -28,6 +28,15 @@ SIGNAL = {
     "frequency": "1", "frequency_unit": "kHz",
 }
 
+EMPTY_CIRCUIT = {
+    "vcc": "", "vcc_unit": "V",
+    "r1": "", "r1_unit": "kΩ",
+    "r2": "", "r2_unit": "kΩ",
+    "rc": "", "rc_unit": "kΩ",
+    "re": "", "re_unit": "kΩ",
+    "beta": "",
+}
+
 
 class SpiceApiCase(unittest.TestCase):
     def setUp(self):
@@ -83,6 +92,16 @@ class TestSpiceApiErrors(SpiceApiCase):
     def test_non_json_body_is_rejected(self):
         response = self.client.post("/api/spice", data="not json")
         self.assertEqual(response.status_code, 400)
+
+
+class TestSpiceDefaults(SpiceApiCase):
+    def test_empty_form_fields_use_reference_circuit(self):
+        response = self.spice(analysis="op", **EMPTY_CIRCUIT, **SIGNAL)
+        self.assertEqual(response.status_code, 200, response.get_data(as_text=True))
+        body = response.get_json()
+        self.assertTrue(body["ok"])
+        self.assertAlmostEqual(float(body["values"]["vb"]["value"]), 1.949, delta=0.05)
+        self.assertAlmostEqual(body["parameters"]["r1"], 100e3, delta=1.0)
 
 
 class TestSpicePageHtml(SpiceApiCase):

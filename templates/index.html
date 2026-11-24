@@ -350,8 +350,70 @@
         {% endif %}
     </main>
 
+    {% if mode == 'divider' %}
+    <section class="card" id="spice-panel">
+        <div class="kicker">04 / SPICE SIMULATION</div>
+        <h2>ngspice Simulation — CE Voltage Divider Reference</h2>
+        <p class="hint">
+            ผลในส่วนนี้มาจาก <strong>ngspice จริง</strong> (รันผ่าน subprocess) และแยกออกจาก
+            <strong>Analytical (Python · dc_bias.py)</strong> ด้านบนอย่างชัดเจน —
+            ตัวเลขสองชุดไม่จำเป็นต้องเท่ากันทุกหลัก เพราะ ngspice ใช้ BJT model และแก้สมการเชิงตัวเลข
+        </p>
+
+        <div class="spice-meta">
+            <span class="badge" id="spice-engine-badge">กำลังตรวจสอบ ngspice…</span>
+            <span class="badge" id="spice-model-badge">Model: QNPN_GENERIC</span>
+            <span class="badge" id="spice-reference-badge">VCC 12 V · R1 100 kΩ · R2 22 kΩ · RC 2.2 kΩ · RE 1 kΩ · RL 10 kΩ</span>
+        </div>
+
+        <div class="row">
+            <div class="col-6">
+                <label for="spice-amplitude">Amplitude (peak)</label>
+                <div class="field-group">
+                    <input type="number" step="any" min="0" id="spice-amplitude" value="10">
+                    <select id="spice-amplitude-unit" aria-label="หน่วย Amplitude">
+                        <option value="mV" selected>mV</option>
+                        <option value="V">V</option>
+                    </select>
+                </div>
+                <span class="hint">ขนาดสัญญาณ SIN สำหรับการวิเคราะห์ Transient</span>
+            </div>
+            <div class="col-6">
+                <label for="spice-frequency">Frequency</label>
+                <div class="field-group">
+                    <input type="number" step="any" min="0" id="spice-frequency" value="1000">
+                    <select id="spice-frequency-unit" aria-label="หน่วย Frequency">
+                        {% for unit in frequency_choices %}
+                        <option value="{{ unit }}" {{ 'selected' if unit == 'Hz' else '' }}>{{ unit }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <span class="hint">ความถี่ของแหล่ง SIN (และจุดอ้างอิงในกราฟ Bode)</span>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button type="button" class="btn" data-spice-analysis="op">Run DC .op</button>
+            <button type="button" class="btn btn-secondary" data-spice-analysis="ac">Run AC .ac</button>
+            <button type="button" class="btn btn-secondary" data-spice-analysis="tran">Run Transient .tran</button>
+        </div>
+
+        <div class="note" id="spice-status" role="status" aria-live="polite">
+            พร้อมทำงาน — ค่าที่จะส่งเข้า ngspice คือค่าที่กรอกในฟอร์มด้านบน (ถ้าว่างจะใช้วงจรอ้างอิง)
+        </div>
+
+        <div class="note spice-error" id="spice-error" hidden>
+            <strong>❌ SPICE Error:</strong>
+            <span id="spice-error-message"></span>
+            <pre id="spice-error-detail" hidden></pre>
+        </div>
+
+        <div id="spice-output"></div>
+    </section>
+    {% endif %}
+
     <footer>
-        <p>สร้างด้วย Flask + Python · ENG29 2121 · Lab 03 · ผลลัพธ์คำนวณจาก Python Backend เท่านั้น</p>
+        <p>สร้างด้วย Flask + Python · ENG29 2121 · Lab 04 · ผลลัพธ์คำนวณจาก Python Backend และ ngspice Simulation</p>
     </footer>
 
     <script src="{{ url_for('static', filename='app.js') }}"></script>

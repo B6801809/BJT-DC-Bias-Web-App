@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import re
+
 from flask import Flask, jsonify, render_template, request
 
+import spice_engine
+import spice_plots
 from circuit import (
     emitter_schematic_svg,
     fixed_schematic_svg,
@@ -15,6 +19,7 @@ from dc_bias import calculate_dc_bias, calculate_emitter_bias, calculate_fixed_b
 from units import (
     AUTO,
     CURRENT_DISPLAY_CHOICES,
+    FREQUENCY_CHOICES,
     RESISTANCE_CHOICES,
     VOLTAGE_CHOICES,
     VOLTAGE_DISPLAY_CHOICES,
@@ -46,6 +51,7 @@ def inject_unit_choices():
         "voltage_choices": VOLTAGE_CHOICES,
         "voltage_display_choices": VOLTAGE_DISPLAY_CHOICES,
         "current_display_choices": CURRENT_DISPLAY_CHOICES,
+        "frequency_choices": FREQUENCY_CHOICES,
     }
 
 # ชนิดข้อมูลและหน่วยเริ่มต้นของแต่ละช่อง
@@ -64,7 +70,152 @@ FIELD_UNITS = {
 ALLOWED_UNITS = {
     "voltage": VOLTAGE_CHOICES,
     "resistance": RESISTANCE_CHOICES,
+    "frequency": FREQUENCY_CHOICES,
 }
+
+SPICE_INSTALL_HINT = (
+    "ติดตั้ง ngspice แล้วตั้งค่า environment variable NGSPICE_BIN ให้ชี้ไปที่ ngspice.exe "
+    "หรือเพิ่มโฟลเดอร์ Spice64\\bin ลง PATH แล้วรีสตาร์ทแอป"
+)
+
+
+def _spice_engine_label(path: str | None) -> str | None:
+    """เดารุ่นของ ngspice จากพาธที่ติดตั้ง เช่น ...\\ngspice-47\\... -> ngspice-47"""
+    if not path:
+        return None
+    match = re.search(r"ngspice[-_ ]?(\d+)", path, re.IGNORECASE)
+    return f"ngspice-{match.group(1)}" if match else "ngspice"
+
+
+def _spice_entry(value: float, kind: str, preference: str) -> dict:
+    text, unit = split_value(value, kind, preference)
+    return {"value": text, "unit": unit, "text": f"{text} {unit}"}
+
+
+def _spice_values(result: dict, selections: dict) -> dict:
+    """จัดรูปแบบผล .op ให้เหมือนผล Analytical เพื่อเทียบกันได้ตรง ๆ"""
+    vol = selections.get("voltage_display", AUTO)
+    cur = selections.get("current_display", AUTO)
+    values = {}
+    for key in ("vb", "ve", "vc", "vce"):
+        values[key] = _spice_entry(result[key], "voltage", vol)
+    for key in ("ib", "ic", "ie"):
+        values[key] = _spice_entry(result[key], "current", cur)
+    return values
+
+
+def _spice_summary(analysis: str, data: dict, amplitude_v: float, frequency_hz: float) -> list[dict]:
+    """สรุปตัวเลขสำคัญของแต่ละ analysis เป็นข้อความพร้อมหน่วย"""
+    if analysis == "ac":
+        frequencies = data["frequency"]
+        gains = data["gain_db"]
+        phases = data["phase_deg"]
+        index = min(range(len(frequencies)), key=lambda i: abs(frequencies[i] - frequency_hz))
+        return [
+            {"label": "จำนวนจุด", "text": f"{len(frequencies)} จุด"},
+            {
+                "label": "ช่วงความถี่",
+                "text": (
+                    f"{_spice_entry(frequencies[0], 'frequency', AUTO)['text']} – "
+                    f"{_spice_entry(frequencies[-1], 'frequency', AUTO)['text']}"
+                ),
+            },
+            {"label": f"Gain @ {_spice_entry(frequency_hz, 'frequency', AUTO)['text']}", "text": f"{gains[index]:.2f} dB"},
+            {"label": f"Phase @ {_spice_entry(frequency_hz, 'frequency', AUTO)['text']}", "text": f"{phases[index]:.1f}°"},
+            {"label": "Gain สูงสุด", "text": f"{max(gains):.2f} dB"},
+        ]
+
+    if analysis == "tran":
+        vin = data["vin"]
+        vout = data["vout"]
+        vin_pp = max(vin) - min(vin)
+        vout_pp = max(vout) - min(vout)
+        gain = vout_pp / vin_pp if vin_pp > 0 else 0.0
+        return [
+            {"label": "จำนวนจุด", "text": f"{len(data['time'])} จุด"},
+            {"label": "ช่วงเวลา", "text": f"{data['time'][0] * 1000:.3g} – {data['time'][-1] * 1000:.3g} ms"},
+            {"label": "Vin peak-peak", "text": _spice_entry(vin_pp, "voltage", AUTO)["text"]},
+            {"label": "Vout peak-peak", "text": _spice_entry(vout_pp, "voltage", AUTO)["text"]},
+            {"label": "|Vout/Vin| (peak-peak)", "text": f"{gain:.3f} ×"},
+            {"label": "ความถี่ SIN", "text": _spice_entry(frequency_hz, "frequency", AUTO)["text"]},
+        ]
+
+    return [
+        {"label": "จำนวนจุด", "text": f"{len(data['ic'])} ค่า"},
+        {"label": "Amplitude ที่ตั้ง", "text": _spice_entry(amplitude_v, "voltage", AUTO)["text"]},
+    ]
+
+
+def _spice_measure(payload: dict, field: str, kind: str, default_si: float, default_unit: str) -> float:
+    """อ่านค่าที่มีหน่วยจาก payload แล้วคืนค่า SI (V / Hz)"""
+    raw = _clean(payload, field)
+    if not raw:
+        return default_si
+
+    unit = _clean(payload, f"{field}_unit") or default_unit
+    if unit not in ALLOWED_UNITS[kind]:
+        raise ValueError(f"หน่วยของ {field.upper()} ไม่ถูกต้อง: {unit}")
+
+    try:
+        value = float(raw)
+    except ValueError as exc:
+        raise ValueError(f"ค่าของ {field.upper()} ต้องเป็นตัวเลข") from exc
+
+    try:
+        return to_si(value, kind, unit)
+    except ValueError as exc:
+        raise ValueError(f"หน่วยของ {field.upper()} ไม่ถูกต้อง: {unit}") from exc
+
+
+def _spice_fill_empty_fields(payload: dict) -> dict:
+    """ช่องฟอร์มที่ส่งมาเป็นข้อความว่างให้ใช้ค่าวงจรอ้างอิง Lab 04
+
+    เฉพาะ field ที่มี key อยู่ใน payload เท่านั้น — การขาด field เลยยังถือว่า
+    ส่งข้อมูลไม่ครบและต้องแจ้ง error เหมือนเดิม
+    """
+    filled = dict(payload)
+    defaults = spice_engine.reference_params()
+
+    for field in ("vcc", "r1", "r2", "rc", "re", "beta"):
+        if field not in filled or _clean(filled, field):
+            continue
+        if field == "beta":
+            filled[field] = f"{defaults['beta']:g}"
+            continue
+
+        kind, fallback_unit = FIELD_UNITS[field]
+        unit = _clean(filled, f"{field}_unit") or fallback_unit
+        if unit not in ALLOWED_UNITS[kind]:
+            unit = fallback_unit
+        text, _unit = split_value(defaults[field], kind, unit)
+        filled[field] = text
+
+    return filled
+
+
+def _spice_request(payload: dict) -> tuple[str, dict, dict, float, float]:
+    """แยก payload วงจร + แปลงค่า amplitude/frequency มาเป็น SI กับค่าที่แสดงผล"""
+    analysis = payload.get("analysis", "op")
+    if analysis not in spice_engine.ANALYSES:
+        raise ValueError(
+            f"ไม่รู้จักวิธีวิเคราะห์ '{analysis}' (รองรับ: {', '.join(spice_engine.ANALYSES)})"
+        )
+
+    params, selections, _mode = _parse_inputs(_spice_fill_empty_fields(payload))
+
+    amplitude_v = _spice_measure(
+        payload, "amplitude", "voltage", spice_engine.DEFAULT_AMPLITUDE_V, "mV"
+    )
+    frequency_hz = _spice_measure(
+        payload, "frequency", "frequency", spice_engine.DEFAULT_FREQUENCY_HZ, "Hz"
+    )
+
+    if not 0 < amplitude_v <= 1.0:
+        raise ValueError("Amplitude ต้องอยู่ระหว่าง 0 ถึง 1 V peak")
+    if not 0 < frequency_hz <= 1e9:
+        raise ValueError("Frequency ต้องอยู่ระหว่าง 0 ถึง 1 GHz")
+
+    return analysis, params, selections, amplitude_v, frequency_hz
 
 # ค่าตัวอย่างสำหรับแสดงภาพวงจรตอนเปิดหน้าเว็บครั้งแรก
 EXAMPLE = {
@@ -376,6 +527,111 @@ def api_calculate():
     payload_out["units"] = selections
     payload_out["display"] = _build_display(result, selections)
     return jsonify(payload_out)
+
+
+@app.route("/api/spice/status", methods=["GET"])
+def api_spice_status():
+    """รายงานสถานะ ngspice, โมเดล BJT และค่าอ้างอิงของวงจร Lab 04"""
+    exe = spice_engine.find_ngspice()
+    model = spice_engine.DEFAULT_MODEL
+    model_definition = (
+        f"NPN(BF={model['bf']:g} IS={model['is']:g} VAF={model['vaf']:g})"
+    )
+    return jsonify(
+        {
+            "available": exe is not None,
+            "engine": _spice_engine_label(exe) or "ngspice",
+            "engine_path": exe,
+            "model": spice_engine.DEFAULT_MODEL_NAME,
+            "model_definition": model_definition,
+            "reference": spice_engine.reference_params(),
+            "defaults": {
+                "amplitude_mv": spice_engine.DEFAULT_AMPLITUDE_V * 1000.0,
+                "frequency_hz": spice_engine.DEFAULT_FREQUENCY_HZ,
+            },
+            "install_hint": SPICE_INSTALL_HINT,
+        }
+    )
+
+
+@app.route("/api/spice", methods=["POST"])
+def api_spice():
+    """รัน ngspice จริงสำหรับ analysis ที่เลือก แล้วคืนผลแยกจากค่า Analytical"""
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return jsonify({"ok": False, "error": "ต้องส่ง JSON object"}), 400
+
+    try:
+        analysis, params, selections, amplitude_v, frequency_hz = _spice_request(payload)
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+
+    if not spice_engine.find_ngspice():
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": "ไม่พบ ngspice ในเครื่อง — ติดตั้งแล้วตั้งค่า NGSPICE_BIN หรือ PATH",
+                    "install_hint": SPICE_INSTALL_HINT,
+                }
+            ),
+            503,
+        )
+
+    try:
+        run_result = spice_engine.run(
+            analysis,
+            params,
+            amplitude_v=amplitude_v,
+            frequency_hz=frequency_hz,
+        )
+    except spice_engine.SpiceError as exc:
+        return jsonify({"ok": False, "error": exc.message, "detail": exc.detail}), 400
+
+    data = run_result["data"]
+    response: dict = {
+        "ok": True,
+        "analysis": analysis,
+        "engine": run_result["engine"],
+        "engine_path": run_result["engine_path"],
+        "model": run_result["model"],
+        "netlist": run_result["netlist"],
+        "log": run_result["log"],
+        "warnings": run_result["warnings"],
+        "duration_ms": run_result["duration_ms"],
+        "parameters": {**params, **run_result["parameters"]},
+        "amplitude": _spice_entry(amplitude_v, "voltage", AUTO),
+        "frequency": _spice_entry(frequency_hz, "frequency", AUTO),
+        "plot_svg": None,
+    }
+
+    if analysis == "op":
+        response["values"] = _spice_values(data, selections)
+        analytical = _calculate("divider", params)
+        response["analytical"] = {
+            "source": "dc_bias.py (Python analytical model)",
+            "region": analytical.get("region", ""),
+            "values": _build_display(analytical, selections),
+        }
+        return jsonify(response)
+
+    if analysis == "ac":
+        response["plot_svg"] = spice_plots.bode_svg(data)
+        response["series"] = {
+            "kind": "bode",
+            "points": len(data["frequency"]),
+            "x_label": "Frequency (Hz)",
+        }
+    else:
+        response["plot_svg"] = spice_plots.waveform_svg(data)
+        response["series"] = {
+            "kind": "waveform",
+            "points": len(data["time"]),
+            "x_label": "Time (s)",
+        }
+
+    response["summary"] = _spice_summary(analysis, data, amplitude_v, frequency_hz)
+    return jsonify(response)
 
 
 if __name__ == "__main__":

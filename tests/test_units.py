@@ -28,6 +28,11 @@ class TestConversion(unittest.TestCase):
         self.assertAlmostEqual(to_si(12, "voltage", "V"), 12.0)
         self.assertAlmostEqual(to_si(12_000, "voltage", "mV"), 12.0)
 
+    def test_frequency_to_si(self):
+        self.assertAlmostEqual(to_si(1000, "frequency", "Hz"), 1000.0)
+        self.assertAlmostEqual(to_si(1, "frequency", "kHz"), 1000.0)
+        self.assertAlmostEqual(to_si(1, "frequency", "MHz"), 1_000_000.0)
+
     def test_unknown_unit_raises(self):
         with self.assertRaises(ValueError):
             to_si(1, "resistance", "หน่วยเท็ม")
@@ -39,6 +44,7 @@ class TestConversion(unittest.TestCase):
         self.assertEqual(auto_unit(1.2e-6, "current"), "µA")
         self.assertEqual(auto_unit(100_000.0, "resistance"), "kΩ")
         self.assertEqual(auto_unit(2.2e6, "resistance"), "MΩ")
+        self.assertEqual(auto_unit(1500.0, "frequency"), "kHz")
 
 
 class TestFormatting(unittest.TestCase):
@@ -47,6 +53,10 @@ class TestFormatting(unittest.TestCase):
         self.assertEqual(format_value(1.229858e-3, "current", AUTO), "1.23 mA")
         self.assertEqual(format_value(12.298581e-6, "current", AUTO), "12.3 µA")
         self.assertEqual(format_value(100_000.0, "resistance", AUTO), "100 kΩ")
+
+    def test_format_value_frequency_auto(self):
+        self.assertEqual(format_value(1000.0, "frequency", AUTO), "1 kHz")
+        self.assertEqual(format_value(1_000_000.0, "frequency", AUTO), "1 MHz")
 
     def test_format_value_fixed_unit(self):
         self.assertEqual(format_value(1.942153, "voltage", "mV"), "1942.153 mV")
