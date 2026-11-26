@@ -11,6 +11,7 @@
     --line: #d3e0ec;
     --orange: #b85c2c;
     --green: #178875;
+    --red: #a51d1d;
 }
 
 * {
@@ -186,7 +187,7 @@ label {
 
 .hint {
     display: block;
-    font-size: 12.5px;
+    font-size: 13px;
     font-weight: normal;
     color: var(--muted);
     margin-top: 2px;
@@ -245,6 +246,11 @@ input[type="number"].invalid {
     transform: translateY(1px);
 }
 
+.btn:focus-visible {
+    outline: 3px solid rgba(12, 128, 120, .55);
+    outline-offset: 2px;
+}
+
 .btn-secondary {
     background: white;
     color: var(--blue);
@@ -291,6 +297,45 @@ input[type="number"].invalid {
 .result-item .unit {
     font-size: .8rem;
     font-weight: normal;
+    color: var(--muted);
+}
+
+.result-hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 12px;
+    margin: 14px 0;
+}
+
+.result-hero > .result-item {
+    flex: 1 1 220px;
+    border-color: #a9d8cc;
+    background: #e9f6f2;
+}
+
+.result-hero > .result-item.primary .value {
+    font-size: 1.6rem;
+    color: #0a5a54;
+}
+
+.result-hero .hero-region {
+    flex: 0 1 190px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 7px;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #f7fbfe;
+}
+
+.result-hero .hero-region .label {
+    font-size: 12.5px;
+    font-weight: bold;
+    letter-spacing: .04em;
     color: var(--muted);
 }
 
@@ -358,6 +403,20 @@ tbody tr:nth-child(even) {
     color: #8d3f18;
 }
 
+.note.form-error {
+    background: #fff1f0;
+    border-left-color: var(--red);
+    color: #7a1717;
+}
+
+.field-error {
+    display: block;
+    margin-top: 4px;
+    font-size: 13px;
+    font-weight: bold;
+    color: var(--red);
+}
+
 /* --- Assumptions --- */
 .assumptions {
     font-size: 13.5px;
@@ -415,6 +474,12 @@ footer {
 }
 
 /* --- Lab 04: SPICE panel --- */
+/* panel อยู่นอก <main> จึงต้องจำกัดความกว้างเองให้ตรงกับการ์ด 01–03 */
+#spice-panel.card {
+    width: min(1140px, calc(100% - 20px));
+    margin: 18px auto;
+}
+
 .spice-meta {
     display: flex;
     flex-wrap: wrap;
@@ -460,10 +525,11 @@ footer {
     border-left-color: var(--green);
 }
 
-.spice-error.spice-error,
-.note.spice-error {
-    background: #fff4e9;
-    border-left-color: var(--orange);
+.note.spice-error,
+.note.spice-status-error {
+    background: #fff1f0;
+    border-left-color: var(--red);
+    color: #7a1717;
 }
 
 .spice-error pre,

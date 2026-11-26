@@ -47,6 +47,34 @@ class TestFlaskRoutes(unittest.TestCase):
         self.assertIn("figure-svg", body)
         self.assertIn("Q1 (NPN)", body)
 
+    def test_get_mode_switch_preserves_entered_values(self):
+        """เปลี่ยนโหมดด้วย GET ต้องคงค่าที่กรอกไว้ในฟอร์ม (ไม่ลบเงียบๆ)"""
+        query = dict(
+            VALID_FORM,
+            mode="fixed",
+            rb="1",
+            rb_unit="MΩ",
+            rc_unit="Ω",
+            apply_mode="1",
+        )
+        response = self.client.get("/", query_string=query)
+        body = response.get_data(as_text=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('name="vcc"', body)
+        self.assertIn('value="12"', body)
+        self.assertIn('name="rb"', body)
+        self.assertIn('value="1"', body)
+        self.assertIn('value="Ω" selected', body)
+        self.assertIn("จะยังอยู่ในฟอร์ม", body)
+
+    def test_results_promote_q_point_and_drop_reference_badge(self):
+        """ผลลัพธ์ต้องยกจุด Q ขึ้นมาก่อน และไม่แสดง badge ค่าอ้างอิงที่หลอกได้"""
+        body = self.client.post("/", data=VALID_FORM).get_data(as_text=True)
+        self.assertIn("จุดทำงาน Q · VCE", body)
+        self.assertIn("จุดทำงาน Q · IC", body)
+        self.assertIn('id="form-error-summary"', body)
+        self.assertNotIn('id="spice-reference-badge"', body)
+
     def test_calculate_renders_all_figures(self):
         """POST / ต้องแสดงภาพวงจร, load line และระดับแรงดัน"""
         response = self.client.post("/", data=VALID_FORM)

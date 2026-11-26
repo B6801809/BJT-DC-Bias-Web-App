@@ -143,7 +143,9 @@ def validate_params(
         "r1": ("R1", "gt0"),
         "r2": ("R2", "gt0"),
         "rc": ("RC", "gt0"),
-        "re": ("RE", "ge0"),
+        # RE=0 ทำให้โหนด emitter ลอย (build_netlist จะตัด RE ออก)
+        # ngspice ยังคืนตัวเลขได้ → ต้องปฏิเสธเพื่อไม่ให้เป็นผลสำเร็จปลอม
+        "re": ("RE", "gt0"),
         "beta": ("β", "gt0"),
     }
     for field, (label, rule) in limits.items():

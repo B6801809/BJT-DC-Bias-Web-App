@@ -37,7 +37,7 @@
                             <button type="submit" name="apply_mode" value="1" formmethod="get"
                                     formnovalidate class="btn btn-secondary">ใช้โหมดนี้</button>
                         </div>
-                        <span class="hint">เปลี่ยนโหมดแล้วกด "ใช้โหมดนี้" เพื่อโหลดฟอร์มที่ใช้เฉพาะวงจรนั้น</span>
+                        <span class="hint">เปลี่ยนโหมดแล้วกด "ใช้โหมดนี้": ค่าและหน่วยที่กรอกไว้จะยังอยู่ในฟอร์ม (เฉพาะช่องที่โหมดใหม่ใช้)</span>
                     </div>
                 </div>
 
@@ -180,6 +180,8 @@
                     </div>
                 </div>
 
+                <div class="note form-error" id="form-error-summary" role="alert" hidden></div>
+
                 <div class="actions">
                     <button type="submit" class="btn">Calculate DC Bias</button>
                     <button type="button" class="btn btn-secondary" id="fill-example">ใส่ค่าตัวอย่าง</button>
@@ -210,6 +212,21 @@
             {% else %}
             <h3>ผลลัพธ์ DC จาก Analytical — {{ mode_label }}</h3>
 
+            <div class="result-hero">
+                <div class="result-item primary">
+                    <span class="label">จุดทำงาน Q · VCE</span>
+                    <span class="value">{{ display.vce.value }} <span class="unit">{{ display.vce.unit }}</span></span>
+                </div>
+                <div class="result-item primary">
+                    <span class="label">จุดทำงาน Q · IC</span>
+                    <span class="value">{{ display.ic.value }} <span class="unit">{{ display.ic.unit }}</span></span>
+                </div>
+                <div class="hero-region">
+                    <span class="label">โซนการทำงาน</span>
+                    <span class="region {{ 'warn' if result.region != 'Forward-Active' else '' }}">{{ result.region }}</span>
+                </div>
+            </div>
+
             <div class="result-grid">
                 <div class="result-item">
                     <span class="label">VB</span>
@@ -224,16 +241,8 @@
                     <span class="value">{{ display.vc.value }} <span class="unit">{{ display.vc.unit }}</span></span>
                 </div>
                 <div class="result-item">
-                    <span class="label">VCE</span>
-                    <span class="value">{{ display.vce.value }} <span class="unit">{{ display.vce.unit }}</span></span>
-                </div>
-                <div class="result-item">
                     <span class="label">IB</span>
                     <span class="value">{{ display.ib.value }} <span class="unit">{{ display.ib.unit }}</span></span>
-                </div>
-                <div class="result-item">
-                    <span class="label">IC</span>
-                    <span class="value">{{ display.ic.value }} <span class="unit">{{ display.ic.unit }}</span></span>
                 </div>
                 <div class="result-item">
                     <span class="label">IE</span>
@@ -252,11 +261,6 @@
                 </div>
                 {% endif %}
             </div>
-
-            <p>
-                <strong>โซนการทำงาน:</strong>
-                <span class="region {{ 'warn' if result.region != 'Forward-Active' else '' }}">{{ result.region }}</span>
-            </p>
 
             {% if result.warning %}
             <div class="note">
@@ -364,7 +368,6 @@
         <div class="spice-meta">
             <span class="badge" id="spice-engine-badge">กำลังตรวจสอบ ngspice…</span>
             <span class="badge" id="spice-model-badge">Model: QNPN_GENERIC</span>
-            <span class="badge" id="spice-reference-badge">VCC 12 V · R1 100 kΩ · R2 22 kΩ · RC 2.2 kΩ · RE 1 kΩ · RL 10 kΩ</span>
         </div>
 
         <div class="row">
@@ -403,7 +406,7 @@
             พร้อมทำงาน — ค่าที่จะส่งเข้า ngspice คือค่าที่กรอกในฟอร์มด้านบน (ถ้าว่างจะใช้วงจรอ้างอิง)
         </div>
 
-        <div class="note spice-error" id="spice-error" hidden>
+        <div class="note spice-error" id="spice-error" role="alert" tabindex="-1" hidden>
             <strong>❌ SPICE Error:</strong>
             <span id="spice-error-message"></span>
             <pre id="spice-error-detail" hidden></pre>

@@ -177,8 +177,11 @@ class TestValidation(unittest.TestCase):
             with self.subTest(field=field):
                 self._assert_invalid(**{field: 0.0})
 
-    def test_allows_zero_emitter_resistor(self):
-        se.validate_params({**self.params, "re": 0.0})
+    def test_rejects_zero_emitter_resistor(self):
+        """RE=0 ต้อง error — ถ้าผ่าน netlist จะตัด RE ออกแล้ว ngspice คืนผลปลอม"""
+        with self.assertRaises(se.SpiceError) as caught:
+            se.validate_params({**self.params, "re": 0.0})
+        self.assertIn("RE", caught.exception.message)
 
     def test_rejects_negative_emitter_resistor(self):
         self._assert_invalid(re=-1.0)

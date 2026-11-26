@@ -79,6 +79,16 @@ class TestSpiceApiErrors(SpiceApiCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("กรุณากรอก", response.get_json()["error"])
 
+    def test_zero_emitter_resistor_returns_400_not_success(self):
+        """RE=0 ต้องไม่ส่ง ok=true/plot/values ให้หน้าเว็บแปลเป็นผลสำเร็จปลอม"""
+        response = self.spice(analysis="op", **{**CIRCUIT, "re": "0", "re_unit": "kΩ"})
+        self.assertEqual(response.status_code, 400)
+        body = response.get_json()
+        self.assertFalse(body["ok"])
+        self.assertIn("RE", body["error"])
+        self.assertNotIn("values", body)
+        self.assertNotIn("plot_svg", body)
+
     def test_missing_engine_returns_503_with_hint(self):
         with mock.patch.object(spice_engine, "find_ngspice", return_value=None):
             response = self.spice(analysis="op", **CIRCUIT)
@@ -124,6 +134,13 @@ class TestSpicePageHtml(SpiceApiCase):
     def test_fixed_mode_page_has_no_spice_section(self):
         body = self.client.get("/?mode=fixed").get_data(as_text=True)
         self.assertNotIn('id="spice-panel"', body)
+
+    def test_spice_error_is_announced(self):
+        """ช่อง error ต้องประกาศด้วย role=alert และไม่มี badge ค่าอ้างอิงคงที่"""
+        body = self.client.get("/").get_data(as_text=True)
+        self.assertIn('id="spice-error"', body)
+        self.assertIn('role="alert"', body)
+        self.assertNotIn('id="spice-reference-badge"', body)
 
 
 @unittest.skipUnless(spice_engine.find_ngspice(), "ngspice not installed")

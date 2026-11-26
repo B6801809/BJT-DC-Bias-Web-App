@@ -6,7 +6,7 @@
     /* --------------------------------------------------------------------------
      * Lab 04 — SPICE panel (ngspice)
      * ทุกผลลัพธ์ในส่วนนี้มาจาก fetch ไปที่ /api/spice ซึ่งรัน ngspice จริง
-     * ถ้า error จะล้างกราฟเดิมทิ้ง ไม่แสดงผลเก่าค้างไว้
+     * ถ้า error จะแจ้งแยกสีแดง แต่ยังคงผลสำเร็จล่าสุดไว้ให้เทียบต่อได้
      * ------------------------------------------------------------------------ */
 
     var panel = document.getElementById("spice-panel");
@@ -27,6 +27,10 @@
     var frequencyInput = document.getElementById("spice-frequency");
     var frequencyUnit = document.getElementById("spice-frequency-unit");
     var buttons = Array.prototype.slice.call(panel.querySelectorAll("[data-spice-analysis]"));
+    var engineReady = null;
+    var engineHint = "";
+    // เวลารอฝั่ง client มากกว่า TIMEOUT_S ของ server เล็กน้อย เผื่อ process ค้าง
+    var REQUEST_TIMEOUT_MS = 35000;
 
     var CIRCUIT_FIELDS = ["vcc", "r1", "r2", "rc", "re", "beta"];
 
@@ -49,6 +53,10 @@
         statusBox.textContent = text;
     }
 
+    function setButtonsDisabled(disabled) {
+        buttons.forEach(function (button) { button.disabled = disabled; });
+    }
+
     function clearError() {
         if (!errorBox) {
             return;
@@ -64,7 +72,6 @@
     }
 
     function showError(message, detail) {
-        clearOutput();
         if (!errorBox) {
             return;
         }
@@ -236,38 +243,63 @@
     }
 
     function runSpice(analysis) {
+        // ถ้ารู้แล้วว่า engine ไม่พร้อม อย่าส่งงานเข้า subprocess ที่ไม่มีตัวตน
+        if (engineReady === false) {
+            showError("Engine ngspice ไม่พร้อม — รัน SPICE ไม่ได้", engineHint);
+            setStatus("ล้มเหลว — engine ไม่พร้อม ไม่ได้ส่งงานเข้า ngspice", "error");
+            return;
+        }
+
         clearError();
-        clearOutput();
         setStatus("กำลังรัน ngspice (" + analysis + ")…", "running");
-        buttons.forEach(function (button) { button.disabled = true; });
+        setButtonsDisabled(true);
 
         var payload = circuitPayload();
         payload.analysis = analysis;
 
-        fetch("/api/spice", {
+        var controller = typeof AbortController === "function" ? new AbortController() : null;
+        var timer = null;
+        if (controller) {
+            timer = setTimeout(function () { controller.abort(); }, REQUEST_TIMEOUT_MS);
+        }
+        var init = {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
-        }).then(function (response) {
+        };
+        if (controller) {
+            init.signal = controller.signal;
+        }
+
+        fetch("/api/spice", init).then(function (response) {
             return response.json().catch(function () {
                 return { ok: false, error: "อ่านคำตอบจากเซิร์ฟเวอร์ไม่ได้" };
             }).then(function (body) {
                 return { status: response.status, body: body };
             });
         }).then(function (result) {
-            if (!result.body.ok) {
+            if (!result.body.ok || !(result.body.values || result.body.plot_svg || result.body.summary)) {
                 var detail = result.body.detail || result.body.install_hint || "";
-                showError(result.body.error || "ไม่ทราบสาเหตุ", detail);
-                setStatus("ล้มเหลว (HTTP " + result.status + ") — ไม่แสดงกราฟ", "error");
+                showError(result.body.error || "ผลลัพธ์จาก ngspice ไม่สมบูรณ์", detail);
+                setStatus("ล้มเหลว (HTTP " + result.status + ") — ไม่มีผลสำเร็จใหม่ ผลเก่าที่ยืนยันแล้วยังอยู่ด้านล่าง", "error");
                 return;
             }
             render(result.body);
             setStatus("สำเร็จ — " + result.body.engine + " ใช้เวลา " + result.body.duration_ms + " ms", "ok");
         }).catch(function (error) {
-            showError("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้", String(error));
-            setStatus("ล้มเหลว — เชื่อมต่อเซิร์ฟเวอร์ไม่ได้", "error");
+            var aborted = error && (error.name === "AbortError" || /abort/i.test(String(error)));
+            if (aborted) {
+                showError("หมดเวลารอ ngspice — ยกเลิกการรันแล้ว", "");
+                setStatus("ล้มเหลว — หมดเวลารอ ngspice ไม่ค้างอยู่ในสถานะกำลังรัน", "error");
+            } else {
+                showError("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้", String(error));
+                setStatus("ล้มเหลว — เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ผลเก่าที่ยืนยันแล้วยังอยู่ด้านล่าง", "error");
+            }
         }).then(function () {
-            buttons.forEach(function (button) { button.disabled = false; });
+            if (timer) {
+                clearTimeout(timer);
+            }
+            setButtonsDisabled(engineReady === false);
         });
     }
 
@@ -280,10 +312,12 @@
     fetch("/api/spice/status").then(function (response) {
         return response.json();
     }).then(function (body) {
+        engineReady = !!body.available;
+        engineHint = body.install_hint || "";
         if (modelBadge) {
             modelBadge.textContent = "Model: " + body.model + " (" + body.model_definition + ")";
         }
-        if (body.available) {
+        if (engineReady) {
             if (engineBadge) {
                 engineBadge.textContent = "ngspice พร้อมใช้งาน · " + (body.engine || "ngspice");
                 engineBadge.className = "badge ok";
@@ -293,13 +327,19 @@
                 engineBadge.textContent = "ไม่พบ ngspice";
                 engineBadge.className = "badge bad";
             }
-            setStatus("ยังไม่ได้ติดตั้ง ngspice: " + body.install_hint, "error");
+            showError("Engine ngspice ไม่พร้อม — รัน SPICE ไม่ได้", engineHint);
+            setStatus("Engine ไม่พร้อม: " + engineHint, "error");
+            setButtonsDisabled(true);
         }
     }).catch(function () {
+        engineReady = false;
         if (engineBadge) {
             engineBadge.textContent = "ตรวจสอบสถานะ ngspice ไม่ได้";
             engineBadge.className = "badge bad";
         }
+        showError("ตรวจสอบสถานะ ngspice ไม่ได้", "โหลด /api/spice/status ล้มเหลว — ระงับปุ่มรันไว้ก่อน");
+        setStatus("ตรวจสอบสถานะ ngspice ไม่ได้ — ปุ่มรันถูกระงับไว้ก่อน", "error");
+        setButtonsDisabled(true);
     });
 })();
 
@@ -334,14 +374,78 @@
         return;
     }
 
+    var summary = document.getElementById("form-error-summary");
+    var FIELD_LABELS = {
+        vcc: "VCC", vbe: "VBE", r1: "R1", r2: "R2",
+        rb: "RB", rc: "RC", re: "RE", beta: "β"
+    };
+
+    function errorId(field) {
+        return (field.id || field.name) + "-error";
+    }
+
+    function setDescribedBy(field, id, add) {
+        var parts = (field.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean);
+        var at = parts.indexOf(id);
+        if (add && at === -1) {
+            parts.push(id);
+        } else if (!add && at !== -1) {
+            parts.splice(at, 1);
+        }
+        if (parts.length) {
+            field.setAttribute("aria-describedby", parts.join(" "));
+        } else {
+            field.removeAttribute("aria-describedby");
+        }
+    }
+
+    function clearFieldError(field) {
+        field.classList.remove("invalid");
+        field.removeAttribute("aria-invalid");
+        var id = errorId(field);
+        setDescribedBy(field, id, false);
+        var node = document.getElementById(id);
+        if (node && node.parentNode) {
+            node.parentNode.removeChild(node);
+        }
+    }
+
+    function setFieldError(field, message) {
+        field.classList.add("invalid");
+        field.setAttribute("aria-invalid", "true");
+        var id = errorId(field);
+        setDescribedBy(field, id, true);
+        var node = document.getElementById(id);
+        if (!node) {
+            node = document.createElement("span");
+            node.className = "field-error";
+            node.id = id;
+            var anchor = field.closest ? field.closest(".field-group") : field;
+            if (anchor && anchor.parentNode) {
+                anchor.parentNode.insertBefore(node, anchor.nextSibling);
+            }
+        }
+        node.textContent = message;
+    }
+
+    function clearAllErrors() {
+        Array.prototype.forEach.call(form.querySelectorAll(".invalid"), function (field) {
+            clearFieldError(field);
+        });
+        if (summary) {
+            summary.hidden = true;
+            summary.textContent = "";
+        }
+    }
+
     var fillBtn = document.getElementById("fill-example");
     if (fillBtn) {
         fillBtn.addEventListener("click", function () {
+            clearAllErrors();
             Object.keys(EXAMPLE).forEach(function (name) {
                 var field = form.elements[name];
                 if (field) {
                     field.value = EXAMPLE[name];
-                    field.classList.remove("invalid");
                 }
             });
             Object.keys(EXAMPLE_UNITS).forEach(function (name) {
@@ -358,28 +462,57 @@
         if (event.submitter && event.submitter.name === "apply_mode") {
             return;
         }
-        var missing = [];
+
+        clearAllErrors();
+
+        // หาโหมดปัจจุบันจากช่อง select
+        var modeSelect = form.elements["mode"];
+        var currentMode = modeSelect ? modeSelect.value : "divider";
+
+        // ฟิลด์ที่ต้องตรวจสอบสำหรับแต่ละโหมด
+        var MODE_FIELDS = {
+            "divider": ["vcc", "r1", "r2", "rc", "re", "beta"],
+            "fixed": ["vcc", "rb", "rc", "beta"],
+            "emitter": ["vcc", "rb", "rc", "re", "beta"]
+        };
+        var relevantFields = MODE_FIELDS[currentMode] || [];
+        var messages = [];
 
         Array.prototype.forEach.call(form.elements, function (field) {
             // ข้ามปุ่มและตัวเลือกหน่วย (ไม่ใช่ค่าตัวเลข)
             if (!field.name || field.type === "button" || field.type === "reset" ||
-                field.type === "select-one" || field.tagName === "SELECT") {
+                field.type === "submit" || field.tagName === "SELECT") {
+                return;
+            }
+            // ข้ามฟิลด์ที่ไม่เกี่ยวข้องกับโหมดปัจจุบัน
+            if (relevantFields.indexOf(field.name) === -1) {
                 return;
             }
             var value = (field.value || "").trim();
-            var isEmpty = value === "";
-            var isNotNumber = !isEmpty && isNaN(Number(value));
+            var label = FIELD_LABELS[field.name] || field.name.toUpperCase();
+            var message = "";
 
-            field.classList.toggle("invalid", isEmpty || isNotNumber);
+            if (value === "") {
+                message = "กรุณากรอกค่า";
+            } else if (isNaN(Number(value))) {
+                message = "ต้องเป็นตัวเลข";
+            } else if (Number(value) < 0) {
+                message = "ค่าต้องไม่ติดลบ";
+            }
 
-            if (isEmpty || isNotNumber) {
-                missing.push(field.id || field.name);
+            if (message) {
+                setFieldError(field, message);
+                messages.push(label + ": " + message);
             }
         });
 
-        if (missing.length > 0) {
+        if (messages.length > 0) {
             event.preventDefault();
-            var first = form.elements[missing[0]];
+            if (summary) {
+                summary.hidden = false;
+                summary.textContent = "ตรวจสอบข้อมูลก่อนคำนวณ — " + messages.join(" · ");
+            }
+            var first = form.querySelector('[aria-invalid="true"]');
             if (first && first.focus) {
                 first.focus();
             }

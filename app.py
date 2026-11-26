@@ -456,17 +456,19 @@ def _build_figures(
 
 @app.route("/", methods=["GET"])
 def index():
-    """แสดงหน้าฟอร์มรับค่าอินพุต พร้อมภาพวงจรตัวอย่างของโหมดที่เลือก"""
+    """แสดงฟอร์มพร้อมภาพตัวอย่าง โดยคงค่าที่ส่งมาตอนเปลี่ยนโหมดไว้ในฟอร์ม"""
     mode = _mode_of(request.args.get("mode"))
-    figures = _build_figures(_example_params(mode), None, EXAMPLE_SELECTIONS, mode)
+    form = request.args if request.args else {}
+    selections = _safe_selections(request.args)
+    figures = _build_figures(_example_params(mode), None, selections, mode)
     return render_template(
         "index.html",
         mode=mode,
         mode_label=MODE_LABELS[mode],
         result=None,
         display={},
-        form={},
-        selections=EXAMPLE_SELECTIONS,
+        form=form,
+        selections=selections,
         **figures,
     )
 
